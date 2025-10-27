@@ -5,13 +5,13 @@ A comprehensive Windows firewall management application built with Python, PySid
 ## Features
 
 - **Bilingual Interface**: Complete support for English and Italian languages
-- **Rule Management**: Add, edit, delete, and manage firewall rules with JSON configuration
-- **Real-time Status**: Monitor firewall status and connection statistics
-- **QR Code Generation**: Export firewall configurations as QR codes
-- **Profile Management**: Support for multiple firewall profiles (Work, Home, Public)
-- **Configuration Management**: Import/export firewall configurations
-- **Logging System**: Comprehensive logging with save/clear functionality
-- **Windows Integration**: Designed specifically for Windows firewall management
+- **Rule Management**: Add, edit, delete, and manage firewall rules
+- **Dark Theme**: Modern dark theme for better visibility
+- **Log Viewer**: Advanced log viewer with search and filtering
+- **Export Capabilities**: Export logs in multiple formats (TXT, CSV, JSON)
+- **Real-time Monitoring**: Monitor firewall status in real-time
+- **User-friendly UI**: Intuitive interface built with PySide6
+- **Cross-platform**: Works on Windows, macOS, and Linux
 
 ## Project Structure
 

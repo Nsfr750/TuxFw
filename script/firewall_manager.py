@@ -121,8 +121,36 @@ class FirewallConfig:
 
     def get_rules(self):
         """Get current firewall rules"""
-        current_profile = self.config["current_profile"]
-        return self.config["profiles"][current_profile].get("rules", [])
+        try:
+            # Ensure config has the right structure
+            if not hasattr(self, 'config') or not isinstance(self.config, dict):
+                self.config = self.get_default_config()
+                return []
+                
+            # Ensure profiles exists and is a dictionary
+            if "profiles" not in self.config or not isinstance(self.config["profiles"], dict):
+                self.config["profiles"] = {"default": {"rules": []}}
+                self.save_config()
+                return []
+            
+            # Get current profile, default to 'default' if not set
+            current_profile = self.config.get("current_profile", "default")
+            
+            # Ensure the current profile exists and has a rules list
+            if not isinstance(self.config["profiles"].get(current_profile), dict):
+                self.config["profiles"][current_profile] = {"rules": []}
+                self.save_config()
+                return []
+                
+            # Ensure rules exists and is a list
+            if "rules" not in self.config["profiles"][current_profile] or not isinstance(self.config["profiles"][current_profile]["rules"], list):
+                self.config["profiles"][current_profile]["rules"] = []
+                self.save_config()
+                
+            return self.config["profiles"][current_profile]["rules"]
+        except Exception as e:
+            self.logger.log_error(f"Error getting rules: {e}")
+            return []
 
     def add_rule(self, rule):
         """Add a new firewall rule"""
@@ -155,9 +183,44 @@ class FirewallConfig:
         return self.config.get("settings", {})
 
     def update_settings(self, settings):
-        """Update firewall settings"""
-        self.config["settings"].update(settings)
-        return self.save_config()
+        """Update firewall settings
+        
+        Args:
+            settings (dict): Dictionary of settings to update
+            
+        Returns:
+            bool: True if settings were updated successfully, False otherwise
+        """
+        try:
+            if not isinstance(settings, dict):
+                self.logger.log_error(f"Invalid settings format: {settings}")
+                return False
+                
+            # Ensure settings dictionary exists in config
+            if 'settings' not in self.config or not isinstance(self.config['settings'], dict):
+                self.config['settings'] = {}
+            
+            # Store the current settings for rollback in case of error
+            old_settings = self.config['settings'].copy()
+            
+            try:
+                # Update the settings
+                self.config['settings'].update(settings)
+                
+                # Save the updated configuration
+                if not self.save_config():
+                    raise Exception("Failed to save configuration")
+                    
+                return True
+                
+            except Exception as e:
+                # Rollback to old settings if there was an error
+                self.config['settings'] = old_settings
+                raise
+            
+        except Exception as e:
+            self.logger.log_error(f"Error updating settings: {e}", exc_info=True)
+            return False
 
     def update_ui(self):
         """Update UI elements (stub for backward compatibility)"""
@@ -697,8 +760,20 @@ class FirewallManager:
             bool: True if the language was changed successfully, False otherwise
         """
         try:
+            if not language or not isinstance(language, str):
+                self.logger.log_error(f"Invalid language code: {language}")
+                return False
+                
+            # Update the current language
             self.current_language = language
-            self.config.update_settings({'language': language})
+            
+            # Update the language in the config
+            success = self.config.update_settings({'language': language})
+            if not success:
+                self.logger.log_error(f"Failed to update language setting: {language}")
+                return False
+                
+            # Log the language change
             self.logger.log_firewall_event(
                 "LANGUAGE_CHANGED", 
                 f"Changed language to {language}"
@@ -801,10 +876,19 @@ class FirewallManager:
             bool: True if the settings were updated successfully, False otherwise
         """
         try:
-            result = self.config.update_settings(settings)
-            if result:
-                self.logger.log_firewall_event("SETTINGS_UPDATED", "Updated firewall settings")
-            return result
+            # Update the settings in the config
+            if not self.config.config.get('settings'):
+                self.config.config['settings'] = {}
+            self.config.config['settings'].update(settings)
+            
+            # Save the updated configuration
+            if self.config.save_config():
+                self.logger.log_firewall_event(
+                    "SETTINGS_UPDATED", 
+                    f"Updated settings: {', '.join(settings.keys())}"
+                )
+                return True
+            return False
         except Exception as e:
             self.logger.log_error(f"Error updating settings: {e}")
             return False

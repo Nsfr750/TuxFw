@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QActionGroup
 from lang.translations import translations
 
 
@@ -11,6 +11,18 @@ class MenuManager:
     def __init__(self, parent, current_language):
         self.parent = parent
         self.current_language = current_language
+        
+        # Initialize action variables
+        self.action_exit = None
+        self.action_english = None
+        self.action_italian = None
+        self.action_view_logs = None
+        self.action_help = None
+        self.action_sponsor = None
+        self.action_about = None
+        
+        # Initialize language actions group
+        self.language_actions = None
 
     def create_menu_bar(self):
         """Create the menu bar"""
@@ -18,46 +30,72 @@ class MenuManager:
 
         # File menu
         file_menu = menubar.addMenu(translations[self.current_language]['menu_file'])
-        exit_action = QAction(translations[self.current_language]['exit'], self.parent)
-        exit_action.triggered.connect(self.parent.close)
-        file_menu.addAction(exit_action)
+        self.action_exit = QAction(translations[self.current_language]['exit'], self.parent)
+        self.action_exit.triggered.connect(self.parent.close)
+        file_menu.addAction(self.action_exit)
 
         # Language menu
         language_menu = menubar.addMenu(translations[self.current_language]['menu_language'])
-        english_action = QAction(translations[self.current_language]['english'], self.parent)
-        english_action.triggered.connect(lambda: self.parent.change_language('en'))
-        language_menu.addAction(english_action)
-
-        italian_action = QAction(translations[self.current_language]['italian'], self.parent)
-        italian_action.triggered.connect(lambda: self.parent.change_language('it'))
-        language_menu.addAction(italian_action)
+        
+        # Create action group for language selection
+        self.language_actions = QActionGroup(self.parent)
+        self.language_actions.setExclusive(True)
+        
+        # English
+        self.action_english = QAction(translations[self.current_language]['english'], self.parent)
+        self.action_english.setCheckable(True)
+        self.action_english.setData('en')
+        self.action_english.triggered.connect(lambda: self.parent.change_language('en'))
+        language_menu.addAction(self.action_english)
+        self.language_actions.addAction(self.action_english)
+        
+        # Italian
+        self.action_italian = QAction(translations[self.current_language]['italian'], self.parent)
+        self.action_italian.setCheckable(True)
+        self.action_italian.setData('it')
+        self.action_italian.triggered.connect(lambda: self.parent.change_language('it'))
+        language_menu.addAction(self.action_italian)
+        self.language_actions.addAction(self.action_italian)
+        
+        # Set current language as checked
+        if self.current_language == 'en':
+            self.action_english.setChecked(True)
+        else:
+            self.action_italian.setChecked(True)
 
         # Help menu
         help_menu = menubar.addMenu(translations[self.current_language]['menu_help'])
 
         # View Logs
-        logs_action = QAction(translations[self.current_language]['logs'], self.parent)
-        logs_action.triggered.connect(self.parent.show_logs)
-        help_menu.addAction(logs_action)
+        self.action_view_logs = QAction(translations[self.current_language]['logs'], self.parent)
+        self.action_view_logs.triggered.connect(self.parent.show_logs)
+        help_menu.addAction(self.action_view_logs)
 
         help_menu.addSeparator()
 
         # Help
-        help_action = QAction(translations[self.current_language]['help'], self.parent)
-        help_action.triggered.connect(self.parent.show_help)
-        help_menu.addAction(help_action)
-
-        # Sponsors
-        sponsors_action = QAction(translations[self.current_language]['sponsors'], self.parent)
-        sponsors_action.triggered.connect(self.parent.show_sponsors)
-        help_menu.addAction(sponsors_action)
+        self.action_help = QAction(translations[self.current_language]['help'], self.parent)
+        self.action_help.triggered.connect(self.parent.show_help)
+        help_menu.addAction(self.action_help)
 
         help_menu.addSeparator()
 
-        # About (existing)
-        about_action = QAction(translations[self.current_language]['about'], self.parent)
-        about_action.triggered.connect(self.parent.about_dialog.show_about)
-        help_menu.addAction(about_action)
+        # Sponsors
+        self.action_sponsor = QAction(translations[self.current_language]['sponsors'], self.parent)
+        self.action_sponsor.triggered.connect(self.parent.show_sponsors)
+        help_menu.addAction(self.action_sponsor)
+
+        # About
+        self.action_about = QAction(translations[self.current_language]['about'], self.parent)
+        self.action_about.triggered.connect(self.show_about)
+        help_menu.addAction(self.action_about)
+
+    def show_about(self):
+        """Show the about dialog"""
+        if not hasattr(self.parent, 'about_dialog') or self.parent.about_dialog is None:
+            from UI.about import AboutDialog
+            self.parent.about_dialog = AboutDialog(self.parent, self.current_language)
+        self.parent.about_dialog.show()
 
     def retranslate_menu(self):
         """Retranslate menu items"""

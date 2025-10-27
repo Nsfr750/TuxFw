@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QHeaderView, QMessageBox, QFileDialog, QSplitter, QCheckBox,
                              QSpinBox, QMenuBar, QMenu, QStatusBar, QProgressBar, QDialog,
                              QDialogButtonBox, QVBoxLayout as QVBox, QHBoxLayout as QHBox,
-                             QApplication, QMessageBox)
+                             QApplication, QMessageBox, QSizePolicy, QScrollArea)
 from PySide6.QtCore import Qt, QTimer, QThread, Signal, QSize
 from PySide6.QtGui import QPixmap, QIcon, QFont, QAction, QImage, QPixmap
 from wand.image import Image as WandImage
@@ -139,24 +139,194 @@ class WindowsFirewallManager(QMainWindow):
         except Exception as e:
             self.logger.log_error(f"Error updating UI: {str(e)}", "update_ui")
             
+    def setup_dark_theme(self):
+        """Set up a modern dark theme with improved contrast and visual hierarchy"""
+        self.setStyleSheet("""
+            /* Base Colors */
+            QMainWindow, QDialog, QWidget, QMenu {
+                background-color: #1e1e1e;
+                color: #e0e0e0;
+                font-family: 'Segoe UI', 'Arial', sans-serif;
+                border: none;
+            }
+            
+            /* Text and Input Fields */
+            QTextEdit, QPlainTextEdit, QLineEdit, QComboBox, QSpinBox, 
+            QDoubleSpinBox, QDateEdit, QTimeEdit, QDateTimeEdit, QTableWidget {
+                background-color: #252526;
+                color: #e0e0e0;
+                border: 1px solid #3e3e42;
+                border-radius: 3px;
+                padding: 5px 8px;
+                selection-background-color: #264f78;
+                selection-color: #ffffff;
+            }
+            
+            /* Buttons */
+            QPushButton, QToolButton {
+                background-color: #333333;
+                color: #e0e0e0;
+                border: 1px solid #3e3e42;
+                border-radius: 3px;
+                padding: 5px 12px;
+                min-width: 80px;
+            }
+            
+            QPushButton:hover, QToolButton:hover {
+                background-color: #3e3e42;
+                border: 1px solid #505050; 
+            }
+            
+            QPushButton:pressed, QToolButton:pressed {
+                background-color: #2a2a2a;
+            }
+            
+            QPushButton:disabled, QToolButton:disabled {
+                color: #7f7f7f;
+                background-color: #2d2d2d;
+                border: 1px solid #3e3e42;
+            }
+            
+            /* Tabs */
+            QTabWidget::pane {
+                border: 1px solid #3e3e42;
+                background: #252526;
+                margin: 0;
+                padding: 0;
+            }
+            
+            QTabBar::tab {
+                background: #2d2d2d;
+                color: #e0e0e0;
+                padding: 8px 15px;
+                border: 1px solid #3e3e42;
+                border-bottom: none;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+                margin-right: 2px;
+            }
+            
+            QTabBar::tab:selected, QTabBar::tab:hover {
+                background: #1e1e1e;
+                border-bottom: 1px solid #1e1e1e;
+                margin-bottom: -1px;
+            }
+            
+            QTabBar::tab:!selected {
+                margin-top: 2px;
+            }
+            
+            /* Headers and Sections */
+            QHeaderView::section, QTableCornerButton::section {
+                background-color: #333333;
+                color: #e0e0e0;
+                padding: 6px;
+                border: 1px solid #3e3e42;
+                text-align: left;
+            }
+            
+            /* Scroll Bars */
+            QScrollBar:vertical, QScrollBar:horizontal {
+                background: #252526;
+                width: 12px;
+                height: 12px;
+            }
+            
+            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+                background: #424242;
+                border-radius: 6px;
+                min-height: 20px;
+                min-width: 20px;
+            }
+            
+            QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
+                background: #5a5a5a;
+            }
+            
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                height: 0px;
+                width: 0px;
+            }
+            
+            /* Group Boxes */
+            QGroupBox {
+                border: 1px solid #3e3e42;
+                border-radius: 4px;
+                margin-top: 15px;
+                padding-top: 15px;
+            }
+            
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+                background-color: transparent;
+                color: #c5c5c5;
+            }
+            
+            /* Menus */
+            QMenuBar {
+                background-color: #252526;
+                color: #e0e0e0;
+                border: none;
+                padding: 2px;
+            }
+            
+            QMenuBar::item:selected {
+                background: #3a3a3a;
+            }
+            QMenu {
+                background-color: #2b2b2b;
+                color: #f0f0f0;
+                border: 1px solid #4a4a4a;
+            }
+            QMenu::item:selected {
+                background-color: #0078d7;
+            }
+            QStatusBar {
+                background-color: #1e1e1e;
+                color: #f0f0f0;
+            }
+            QToolBar {
+                background-color: #2b2b2b;
+                border: none;
+                spacing: 2px;
+            }
+            QToolButton {
+                background: transparent;
+                border: 1px solid transparent;
+                border-radius: 2px;
+                padding: 2px;
+            }
+            QToolButton:hover {
+                background: #3a3a3a;
+                border: 1px solid #5a5a5a;
+            }
+            QToolButton:pressed {
+                background: #1a1a1a;
+            }
+        """)
+
     def init_ui(self):
         """Initialize the main UI components"""
-        # Initialize dialog references
-        self.about_dialog: Optional[AboutDialog] = None
-        self.menu_manager: Optional[MenuManager] = None
-        self.view_logs_window: Optional[ViewLogsWindow] = None
-        self.sponsor_window: Optional[SponsorWindow] = None
-        self.help_window: Optional[HelpWindow] = None
-        
-        # Set window properties
+        # Set window properties first
         self.setWindowTitle(translations[self.current_language].get('app_title', 'Firewall Manager'))
         self.setMinimumSize(1000, 700)
+        
+        # Apply dark theme
+        self.setup_dark_theme()
+        
+        # Initialize dialog references
+        self.about_dialog = AboutDialog(self, self.current_language)
+        self.view_logs_window = None
+        self.sponsor_window = None
+        self.help_window = None
         
         # Set window icon if available
         self.setup_window_icon()
         
         # Set up the main window
-        self.setup_menu()
         self.setup_toolbar()
         self.setup_statusbar()
         self.setup_main_widget()
@@ -164,6 +334,194 @@ class WindowsFirewallManager(QMainWindow):
         # Load initial data
         self.load_initial_data()
         
+    def setup_toolbar(self):
+        """Set up the main toolbar with common actions"""
+        # Create toolbar
+        self.toolbar = self.addToolBar('Main Toolbar')
+        self.toolbar.setMovable(False)
+        
+        # Add actions to the toolbar
+        # You can add more actions as needed
+        self.toolbar.addAction(self.menu_manager.action_about)
+        self.toolbar.addSeparator()
+        
+        # Add a simple label to the toolbar
+        self.status_label = QLabel(translations[self.current_language].get('status_ready', 'Ready'))
+        self.toolbar.addWidget(self.status_label)
+        
+        # Add a stretch to push the status label to the right
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self.toolbar.addWidget(spacer)
+        
+        # Add a refresh button to the right
+        refresh_action = QAction('⟳', self)  # Using a refresh symbol
+        refresh_action.setStatusTip(translations[self.current_language].get('refresh', 'Refresh'))
+        refresh_action.triggered.connect(self.update_ui)
+        self.toolbar.addAction(refresh_action)
+        
+    def setup_statusbar(self):
+        """Set up the status bar with status label and progress bar"""
+        # Create status bar
+        status_bar = self.statusBar()
+        
+        # Create status label
+        self.status_label = QLabel(translations[self.current_language].get('status_ready', 'Ready'))
+        status_bar.addPermanentWidget(self.status_label, 1)
+        
+        # Create progress bar
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMaximumWidth(200)
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMaximum(100)
+        self.progress_bar.hide()  # Hide by default, show when needed
+        status_bar.addPermanentWidget(self.progress_bar)
+        
+        # Show initial status message
+        status_bar.showMessage(translations[self.current_language].get('welcome_message', 'Application started'))
+        
+    def setup_main_widget(self):
+        """Set up the main widget with tabs for different functionality"""
+        # Create a central widget and set the main layout
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        
+        # Create main layout
+        main_layout = QVBoxLayout(central_widget)
+        
+        # Create tab widget
+        self.tab_widget = QTabWidget()
+        
+        # Add tabs
+        self.tab_widget.addTab(self.create_status_tab(), 
+                             translations[self.current_language].get('tab_status', 'Status'))
+        self.tab_widget.addTab(self.create_rules_tab(), 
+                             translations[self.current_language].get('tab_rules', 'Rules'))
+        self.tab_widget.addTab(self.create_logs_tab(), 
+                             translations[self.current_language].get('tab_logs', 'Logs'))
+        self.tab_widget.addTab(self.create_config_tab(),
+                             translations[self.current_language].get('tab_settings', 'Settings'))
+        
+        # Add tab widget to main layout
+        main_layout.addWidget(self.tab_widget)
+        
+    def create_status_tab(self):
+        """Create the status tab"""
+        # Create status tab widget
+        status_tab = QWidget()
+        layout = QVBoxLayout(status_tab)
+        
+        # Add status information
+        self.status_info = QLabel(translations[self.current_language].get('loading_status', 'Loading status...'))
+        layout.addWidget(self.status_info)
+        
+        # Add refresh button
+        refresh_btn = QPushButton(translations[self.current_language].get('refresh', 'Refresh'))
+        refresh_btn.clicked.connect(self.update_status)
+        layout.addWidget(refresh_btn)
+        
+        # Add stretch to push content to the top
+        layout.addStretch()
+        
+        return status_tab
+        
+    def create_rules_tab(self):
+        """Create the rules management tab"""
+        rules_tab = QWidget()
+        layout = QVBoxLayout(rules_tab)
+        
+        # Add rules table or list
+        self.rules_table = QTableWidget()
+        self.rules_table.setColumnCount(4)
+        self.rules_table.setHorizontalHeaderLabels([
+            translations[self.current_language].get('rule_name', 'Name'),
+            translations[self.current_language].get('rule_direction', 'Direction'),
+            translations[self.current_language].get('rule_protocol', 'Protocol'),
+            translations[self.current_language].get('rule_action', 'Action')
+        ])
+        layout.addWidget(self.rules_table)
+        
+        # Add buttons for rule management
+        btn_layout = QHBoxLayout()
+        
+        add_btn = QPushButton(translations[self.current_language].get('add_rule', 'Add Rule'))
+        edit_btn = QPushButton(translations[self.current_language].get('edit_rule', 'Edit'))
+        delete_btn = QPushButton(translations[self.current_language].get('delete_rule', 'Delete'))
+        
+        btn_layout.addWidget(add_btn)
+        btn_layout.addWidget(edit_btn)
+        btn_layout.addWidget(delete_btn)
+        
+        layout.addLayout(btn_layout)
+        
+        return rules_tab
+        
+    def create_logs_tab(self):
+        """Create the logs tab"""
+        logs_tab = QWidget()
+        layout = QVBoxLayout(logs_tab)
+        
+        # Add logs text area
+        self.logs_text = QTextEdit()
+        self.logs_text.setReadOnly(True)
+        layout.addWidget(self.logs_text)
+        
+        # Add buttons for log management
+        btn_layout = QHBoxLayout()
+        
+        refresh_btn = QPushButton(translations[self.current_language].get('refresh', 'Refresh'))
+        clear_btn = QPushButton(translations[self.current_language].get('clear_logs', 'Clear'))
+        save_btn = QPushButton(translations[self.current_language].get('save_logs', 'Save'))
+        
+        refresh_btn.clicked.connect(self.refresh_logs)
+        clear_btn.clicked.connect(self.clear_logs)
+        save_btn.clicked.connect(self.save_logs)
+        
+        btn_layout.addWidget(refresh_btn)
+        btn_layout.addWidget(clear_btn)
+        btn_layout.addWidget(save_btn)
+        
+        layout.addLayout(btn_layout)
+        
+        return logs_tab
+        
+    def update_status(self):
+        """Update the status tab with current information"""
+        # This will be implemented to update the status tab
+        self.status_info.setText(translations[self.current_language].get('status_updated', 'Status updated'))
+        
+    def refresh_logs(self):
+        """Refresh the logs display"""
+        # This will be implemented to refresh logs
+        self.logs_text.append(translations[self.current_language].get('logs_refreshed', 'Logs refreshed at ') + 
+                             str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+        
+    def clear_logs(self):
+        """Clear the logs display"""
+        self.logs_text.clear()
+        
+    def save_logs(self):
+        """Save logs to a file"""
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            translations[self.current_language].get('save_logs', 'Save Logs'),
+            '',
+            'Text Files (*.txt);;All Files (*)'
+        )
+        
+        if file_path:
+            try:
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(self.logs_text.toPlainText())
+                self.statusBar().showMessage(
+                    translations[self.current_language].get('logs_saved', 'Logs saved successfully'))
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    translations[self.current_language].get('error', 'Error'),
+                    f"{translations[self.current_language].get('save_error', 'Failed to save logs:')} {str(e)}"
+                )
+    
     def setup_window_icon(self):
         """Set up the application window icon"""
         try:
@@ -194,6 +552,7 @@ class WindowsFirewallManager(QMainWindow):
         
         # Create menu bar
         self.menu_manager = MenuManager(self, self.current_language)
+        self.menu_bar = self.menuBar()
         self.menu_manager.create_menu_bar()
         
         # Create tab widget for different sections
@@ -267,14 +626,14 @@ class WindowsFirewallManager(QMainWindow):
         # This can be expanded to support different themes
         self.setStyleSheet("""
             QMainWindow, QDialog {
-                background-color: #f0f0f0;
+                background-color: #6b6d6b;
             }
             QTabWidget::pane {
                 border: 1px solid #c0c0c0;
                 padding: 5px;
             }
             QTabBar::tab {
-                background: #e0e0e0;
+                background: #525252
                 padding: 8px 12px;
                 margin: 2px;
                 border: 1px solid #c0c0c0;
@@ -283,7 +642,7 @@ class WindowsFirewallManager(QMainWindow):
                 border-top-right-radius: 4px;
             }
             QTabBar::tab:selected {
-                background: #ffffff;
+                background: #7d7d7d
                 border-bottom: 1px solid #ffffff;
             }
         """)
@@ -433,14 +792,22 @@ class WindowsFirewallManager(QMainWindow):
         # Buttons
         button_layout = QHBoxLayout()
         
+        # Rule management buttons
         self.add_rule_btn = QPushButton(translations[self.current_language].get('add_rule', 'Add Rule'))
         self.edit_rule_btn = QPushButton(translations[self.current_language].get('edit_rule', 'Edit Rule'))
         self.delete_rule_btn = QPushButton(translations[self.current_language].get('delete_rule', 'Delete Rule'))
         
+        # Config management buttons
+        self.load_config_btn = QPushButton(translations[self.current_language].get('load_config', 'Load Config'))
+        self.save_config_btn = QPushButton(translations[self.current_language].get('save_config', 'Save Config'))
+        
+        # Add buttons to layout
         button_layout.addWidget(self.add_rule_btn)
         button_layout.addWidget(self.edit_rule_btn)
         button_layout.addWidget(self.delete_rule_btn)
         button_layout.addStretch()
+        button_layout.addWidget(self.load_config_btn)
+        button_layout.addWidget(self.save_config_btn)
         
         layout.addWidget(self.rules_table)
         layout.addLayout(button_layout)
@@ -586,7 +953,7 @@ class WindowsFirewallManager(QMainWindow):
     def show_logs(self):
         """Show the logs window"""
         if self.view_logs_window is None:
-            self.view_logs_window = ViewLogsWindow(self, self.current_language)
+            self.view_logs_window = ViewLogsWindow(self, self.current_language, self.logger)
         self.view_logs_window.show()
         self.view_logs_window.raise_()
     
@@ -766,18 +1133,407 @@ class WindowsFirewallManager(QMainWindow):
         pass
         
     def create_config_tab(self):
-        """Create the configuration tab"""
-        pass
+        """Create the configuration tab with application settings"""
+        config_tab = QWidget()
+        layout = QVBoxLayout(config_tab)
+        
+        # Create a scroll area to handle many settings
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll_content = QWidget()
+        scroll_layout = QVBoxLayout(scroll_content)
+        
+        # Language settings
+        lang_group = QGroupBox(translations[self.current_language].get('settings_language', 'Language Settings'))
+        lang_layout = QFormLayout()
+        
+        self.language_combo = QComboBox()
+        self.language_combo.addItem("English", "en")
+        self.language_combo.addItem("Italiano", "it")
+        # Add more languages as needed
+        
+        # Set current language
+        current_index = self.language_combo.findData(self.current_language)
+        if current_index >= 0:
+            self.language_combo.setCurrentIndex(current_index)
+            
+        self.language_combo.currentIndexChanged.connect(self.on_language_changed)
+        
+        lang_layout.addRow(translations[self.current_language].get('settings_language', 'Language:'), 
+                          self.language_combo)
+        lang_group.setLayout(lang_layout)
+        
+        # Theme settings
+        theme_group = QGroupBox(translations[self.current_language].get('settings_theme', 'Appearance'))
+        theme_layout = QVBoxLayout()
+        
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItem(translations[self.current_language].get('theme_dark', 'Dark'), 'dark')
+        self.theme_combo.addItem(translations[self.current_language].get('theme_light', 'Light'), 'light')
+        self.theme_combo.addItem(translations[self.current_language].get('theme_system', 'System'), 'system')
+        
+        # Load saved theme preference
+        current_theme = self.firewall.config.config.get('settings', {}).get('theme', 'dark')
+        theme_index = self.theme_combo.findData(current_theme)
+        if theme_index >= 0:
+            self.theme_combo.setCurrentIndex(theme_index)
+            
+        self.theme_combo.currentIndexChanged.connect(self.on_theme_changed)
+        
+        theme_layout.addWidget(QLabel(translations[self.current_language].get('settings_theme', 'Theme:')))
+        theme_layout.addWidget(self.theme_combo)
+        
+        # Add theme preview or additional appearance settings here
+        
+        theme_group.setLayout(theme_layout)
+        
+        # Firewall behavior settings
+        fw_group = QGroupBox(translations[self.current_language].get('settings_firewall', 'Firewall Behavior'))
+        fw_layout = QFormLayout()
+        
+        # Auto-start with system
+        self.auto_start_cb = QCheckBox(translations[self.current_language].get('settings_autostart', 'Start with system'))
+        self.auto_start_cb.setChecked(self.firewall.config.config.get('settings', {}).get('auto_start', False))
+        self.auto_start_cb.stateChanged.connect(self.on_auto_start_changed)
+        
+        # Show notifications
+        self.show_notifications_cb = QCheckBox(translations[self.current_language].get('settings_notifications', 'Show notifications'))
+        self.show_notifications_cb.setChecked(self.firewall.config.config.get('settings', {}).get('show_notifications', True))
+        self.show_notifications_cb.stateChanged.connect(self.on_notifications_changed)
+        
+        # Block all incoming connections by default
+        self.block_incoming_cb = QCheckBox(translations[self.current_language].get('settings_block_incoming', 'Block all incoming connections by default'))
+        self.block_incoming_cb.setChecked(self.firewall.config.config.get('settings', {}).get('block_incoming', True))
+        self.block_incoming_cb.stateChanged.connect(self.on_block_incoming_changed)
+        
+        fw_layout.addRow(self.auto_start_cb)
+        fw_layout.addRow(self.show_notifications_cb)
+        fw_layout.addRow(self.block_incoming_cb)
+        
+        # Add more firewall settings as needed
+        
+        fw_group.setLayout(fw_layout)
+        
+        # Add all groups to the scroll layout
+        scroll_layout.addWidget(lang_group)
+        scroll_layout.addWidget(theme_group)
+        scroll_layout.addWidget(fw_group)
+        
+        # Add stretch to push content to the top
+        scroll_layout.addStretch()
+        
+        # Set the scroll content
+        scroll.setWidget(scroll_content)
+        
+        # Add scroll to main layout
+        layout.addWidget(scroll)
+        
+        # Add save and reset buttons
+        button_layout = QHBoxLayout()
+        
+        save_btn = QPushButton(translations[self.current_language].get('save', 'Save'))
+        save_btn.clicked.connect(self.save_settings)
+        
+        reset_btn = QPushButton(translations[self.current_language].get('reset', 'Reset to Defaults'))
+        reset_btn.clicked.connect(self.reset_settings)
+        
+        button_layout.addStretch()
+        button_layout.addWidget(reset_btn)
+        button_layout.addWidget(save_btn)
+        
+        layout.addLayout(button_layout)
+        
+        return config_tab
         
     def update_ui(self):
         """Update all UI elements"""
         pass
         
+    def on_language_changed(self, index):
+        """Handle language change from the settings tab"""
+        try:
+            new_lang = self.language_combo.currentData()
+            if new_lang and new_lang != self.current_language:
+                # Update the language using the firewall manager
+                if not self.firewall.change_language(new_lang):
+                    self.logger.log_error(f"Failed to change language to {new_lang}")
+                    return
+                    
+                # Update the UI
+                self.current_language = new_lang
+                self.retranslate_ui()
+                
+                # No need to update settings again as change_language already does this
+                
+                # Show a message that the app needs to restart for changes to take effect
+                QMessageBox.information(
+                    self,
+                    translations[self.current_language].get('restart_required', 'Restart Required'),
+                    translations[self.current_language].get('restart_message', 'Please restart the application for language changes to take full effect.')
+                )
+        except Exception as e:
+            self.logger.log_error(f"Error changing language: {e}")
+            QMessageBox.critical(
+                self,
+                translations[self.current_language].get('error', 'Error'),
+                f"Failed to change language: {str(e)}"
+            )
+    
+    def on_theme_changed(self, index):
+        """Handle theme change from the settings tab"""
+        try:
+            theme = self.theme_combo.currentData()
+            if theme:
+                # Update the theme in settings
+                settings = self.firewall.config.config.get('settings', {})
+                settings['theme'] = theme
+                self.firewall.config.update_settings(settings)
+                
+                # Apply the theme
+                if theme == 'dark':
+                    self.setup_dark_theme()
+                elif theme == 'light':
+                    self.setup_light_theme()
+                else:  # system
+                    # You can implement system theme detection here
+                    self.setup_dark_theme()  # Default to dark for now
+        except Exception as e:
+            self.logger.log_error(f"Error changing theme: {e}")
+    
+    def on_auto_start_changed(self, state):
+        """Handle auto-start setting change"""
+        try:
+            auto_start = state == Qt.Checked
+            settings = self.firewall.config.config.get('settings', {})
+            settings['auto_start'] = auto_start
+            self.firewall.config.update_settings(settings)
+            
+            # Here you would typically update the system auto-start setting
+            # This is platform-specific code that would need to be implemented
+            self.update_auto_start(auto_start)
+        except Exception as e:
+            self.logger.log_error(f"Error updating auto-start setting: {e}")
+    
+    def on_notifications_changed(self, state):
+        """Handle notifications setting change"""
+        try:
+            show_notifications = state == Qt.Checked
+            settings = self.firewall.config.config.get('settings', {})
+            settings['show_notifications'] = show_notifications
+            self.firewall.config.update_settings(settings)
+        except Exception as e:
+            self.logger.log_error(f"Error updating notifications setting: {e}")
+    
+    def on_block_incoming_changed(self, state):
+        """Handle block incoming connections setting change"""
+        try:
+            block_incoming = state == Qt.Checked
+            settings = self.firewall.config.config.get('settings', {})
+            settings['block_incoming'] = block_incoming
+            self.firewall.config.update_settings(settings)
+            
+            # Apply the firewall rule change
+            self.firewall.update_settings({'block_incoming': block_incoming})
+        except Exception as e:
+            self.logger.log_error(f"Error updating block incoming setting: {e}")
+    
+    def save_settings(self):
+        """Save all settings from the settings tab"""
+        try:
+            # Most settings are saved automatically when changed
+            # This method can be used for settings that need to be saved together
+            QMessageBox.information(
+                self,
+                translations[self.current_language].get('settings_saved', 'Settings Saved'),
+                translations[self.current_language].get('settings_saved_msg', 'All settings have been saved.')
+            )
+        except Exception as e:
+            self.logger.log_error(f"Error saving settings: {e}")
+            QMessageBox.critical(
+                self,
+                translations[self.current_language].get('error', 'Error'),
+                f"Failed to save settings: {str(e)}"
+            )
+    
+    def reset_settings(self):
+        """Reset all settings to default values"""
+        try:
+            reply = QMessageBox.question(
+                self,
+                translations[self.current_language].get('confirm_reset', 'Confirm Reset'),
+                translations[self.current_language].get('confirm_reset_msg', 'Are you sure you want to reset all settings to default values?'),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if reply == QMessageBox.StandardButton.Yes:
+                # Reset to default values
+                default_settings = {
+                    'language': 'en',
+                    'theme': 'dark',
+                    'auto_start': False,
+                    'show_notifications': True,
+                    'block_incoming': True
+                }
+                
+                # Update settings using the proper method
+                if not self.firewall.config.update_settings(default_settings):
+                    self.logger.log_error("Failed to reset settings to defaults")
+                    QMessageBox.critical(
+                        self,
+                        translations[self.current_language].get('error', 'Error'),
+                        translations[self.current_language].get('reset_failed', 'Failed to reset settings to default values.')
+                    )
+                    return
+                
+                # Update UI to reflect default settings
+                self.current_language = 'en'
+                self.retranslate_ui()
+                self.setup_dark_theme()
+                
+                # Reset UI controls
+                lang_index = self.language_combo.findData('en')
+                if lang_index >= 0:
+                    self.language_combo.setCurrentIndex(lang_index)
+                    
+                theme_index = self.theme_combo.findData('dark')
+                if theme_index >= 0:
+                    self.theme_combo.setCurrentIndex(theme_index)
+                    
+                self.auto_start_cb.setChecked(False)
+                self.show_notifications_cb.setChecked(True)
+                self.block_incoming_cb.setChecked(True)
+                
+                QMessageBox.information(
+                    self,
+                    translations[self.current_language].get('settings_reset', 'Settings Reset'),
+                    translations[self.current_language].get('settings_reset_msg', 'All settings have been reset to default values.')
+                )
+        except Exception as e:
+            self.logger.log_error(f"Error resetting settings: {e}")
+            QMessageBox.critical(
+                self,
+                translations[self.current_language].get('error', 'Error'),
+                f"Failed to reset settings: {str(e)}"
+            )
+    
+    def update_auto_start(self, enable):
+        """Update system auto-start setting (platform-specific)"""
+        # This is a placeholder for platform-specific auto-start implementation
+        # You would need to implement this based on the target OS
+        if sys.platform == 'win32':
+            # Windows implementation
+            import winreg as reg
+            try:
+                key = reg.HKEY_CURRENT_USER
+                key_path = r"Software\Microsoft\Windows\CurrentVersion\Run"
+                with reg.OpenKey(key, key_path, 0, reg.KEY_ALL_ACCESS) as registry_key:
+                    if enable:
+                        reg.SetValueEx(registry_key, "TuxFw", 0, reg.REG_SZ, sys.executable)
+                    else:
+                        try:
+                            reg.DeleteValue(registry_key, "TuxFw")
+                        except WindowsError:
+                            pass  # Key doesn't exist, which is fine
+            except Exception as e:
+                self.logger.log_error(f"Error updating Windows auto-start: {e}")
+        elif sys.platform == 'darwin':
+            # macOS implementation
+            pass  # Implement macOS auto-start
+        else:
+            # Linux implementation
+            pass  # Implement Linux auto-start
+
+    def setup_light_theme(self):
+        """Set up a light theme for the application"""
+        self.setStyleSheet("""
+            QMainWindow, QDialog, QWidget {
+                background-color: #f0f0f0;
+                color: #333333;
+            }
+            QTabWidget::pane {
+                border: 1px solid #c0c0c0;
+                background: #ffffff;
+                margin: 0px;
+                padding: 5px;
+            }
+            QTabBar::tab {
+                background: #e0e0e0;
+                border: 1px solid #c0c0c0;
+                padding: 8px 12px;
+                margin-right: 2px;
+            }
+            QTabBar::tab:selected {
+                background: #ffffff;
+                border-bottom-color: #ffffff;
+            }
+            QGroupBox {
+                border: 1px solid #c0c0c0;
+                border-radius: 4px;
+                margin-top: 10px;
+                padding-top: 15px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px;
+            }
+            QPushButton {
+                background-color: #e0e0e0;
+                border: 1px solid #c0c0c0;
+                padding: 5px 15px;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #d0d0d0;
+            }
+            QPushButton:pressed {
+                background-color: #c0c0c0;
+            }
+            QLineEdit, QComboBox, QTextEdit, QSpinBox, QDoubleSpinBox {
+                border: 1px solid #c0c0c0;
+                padding: 5px;
+                border-radius: 3px;
+                background: #ffffff;
+                color: #000000;
+            }
+            QTableWidget {
+                gridline-color: #e0e0e0;
+                background: #ffffff;
+                color: #000000;
+            }
+            QHeaderView::section {
+                background-color: #e0e0e0;
+                padding: 5px;
+                border: 1px solid #c0c0c0;
+            }
+            QStatusBar {
+                background: #e0e0e0;
+                color: #333333;
+            }
+        """)
+        
     def load_settings(self):
         """Load settings from configuration"""
-        pass
-        
-    # Add other methods as needed...
+        try:
+            # This method is called during initialization to load saved settings
+            settings = self.firewall.config.config.get('settings', {})
+            
+            # Apply theme
+            theme = settings.get('theme', 'dark')
+            if theme == 'light':
+                self.setup_light_theme()
+            elif theme == 'system':
+                # Implement system theme detection if needed
+                self.setup_dark_theme()
+            else:
+                self.setup_dark_theme()
+                
+            # Other settings can be loaded here if needed
+            
+        except Exception as e:
+            self.logger.log_error(f"Error loading settings: {e}")
+            # Fall back to default theme if there's an error
+            self.setup_dark_theme()
 
 class RuleDialog(QDialog):
     """Dialog for adding/editing firewall rules"""

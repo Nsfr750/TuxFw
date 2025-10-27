@@ -155,8 +155,6 @@ class AboutDialog(QDialog):
             self.language_manager.get_text(
                 "about.description",
                 "A graphical user interface for Firewall.\n\n"
-                "ClamAV GUI provides an easy-to-use interface for scanning files, "
-                "updating virus definitions, and managing ClamAV settings."
             )
         )
         description.setWordWrap(True)
@@ -250,7 +248,7 @@ class AboutDialog(QDialog):
         # GitHub button
         github_btn = QPushButton("GitHub")
         github_btn.clicked.connect(lambda: QDesktopServices.openUrl(
-            QUrl("https://github.com/Nsfr750/ClamAV-GUI")))
+            QUrl("https://github.com/Nsfr750/TuxFw")))
         # Style GitHub button with blue background and white text
         github_btn.setStyleSheet("""
             QPushButton {
@@ -307,11 +305,11 @@ class AboutDialog(QDialog):
         """Retranslate the UI when language changes."""
         try:
             # Update window title
-            self.setWindowTitle(self.language_manager.get_text("about.title", "About ClamAV GUI"))
+            self.setWindowTitle(self.language_manager.get_text("about.title", "About TuxFw"))
             
             # Update other translatable elements here if needed
             if hasattr(self, 'title_label'):
-                self.title_label.setText(self.language_manager.get_text("about.title", "ClamAV GUI"))
+                self.title_label.setText(self.language_manager.get_text("about.title", "TuxFw"))
                 
             # Update version info
             if hasattr(self, 'version_label'):
@@ -376,7 +374,7 @@ class AboutDialog(QDialog):
             <body>
                 <h3>Application</h3>
                 <table>
-                    <tr><td><b>Name:</b></td><td>ClamAV GUI</td></tr>
+                    <tr><td><b>Name:</b></td><td>TuxFw</td></tr>
                     <tr><td><b>Version:</b></td><td>{app_version} {app_codename} ({app_status})</td></tr>
                 </table>
                 

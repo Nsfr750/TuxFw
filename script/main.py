@@ -24,7 +24,7 @@ def main():
     try:
         # Initialize logger
         logger = get_logger("firewall")
-        logger.log_firewall_event("STARTUP", "Firewall Manager application started")
+        logger.log_firewall_event("STARTUP", "TuxFw Application started")
         
         # Create application
         app = QApplication(sys.argv)
@@ -33,9 +33,9 @@ def main():
         app.setStyle('Fusion')
         
         # Set application info
-        app.setApplicationName("Firewall Manager")
-        app.setApplicationVersion("1.0.0")
-        app.setOrganizationName("Your Organization")
+        app.setApplicationName("TuxFw")
+        app.setApplicationVersion("0.0.1")
+        app.setOrganizationName("Tuxxle")
         
         # Import translations
         from lang.translations import translations
@@ -48,7 +48,7 @@ def main():
         window.show()
 
         # Start event loop
-        logger.log_firewall_event("SHUTDOWN", "Firewall Manager application closed normally")
+        logger.log_firewall_event("SHUTDOWN", "TuxFw application closed normally")
         sys.exit(app.exec())
     except Exception as e:
         logger.log_error(f"Application crashed: {e}", context="main()")
