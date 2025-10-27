@@ -66,13 +66,6 @@ class MenuManager:
         # Help menu
         help_menu = menubar.addMenu(translations[self.current_language]['menu_help'])
 
-        # View Logs
-        self.action_view_logs = QAction(translations[self.current_language]['logs'], self.parent)
-        self.action_view_logs.triggered.connect(self.parent.show_logs)
-        help_menu.addAction(self.action_view_logs)
-
-        help_menu.addSeparator()
-
         # Help
         self.action_help = QAction(translations[self.current_language]['help'], self.parent)
         self.action_help.triggered.connect(self.parent.show_help)
@@ -80,15 +73,22 @@ class MenuManager:
 
         help_menu.addSeparator()
 
+        # About
+        self.action_about = QAction(translations[self.current_language]['about'], self.parent)
+        self.action_about.triggered.connect(self.show_about)
+        help_menu.addAction(self.action_about)
+
         # Sponsors
         self.action_sponsor = QAction(translations[self.current_language]['sponsors'], self.parent)
         self.action_sponsor.triggered.connect(self.parent.show_sponsors)
         help_menu.addAction(self.action_sponsor)
 
-        # About
-        self.action_about = QAction(translations[self.current_language]['about'], self.parent)
-        self.action_about.triggered.connect(self.show_about)
-        help_menu.addAction(self.action_about)
+        help_menu.addSeparator()
+
+        # View Logs
+        self.action_view_logs = QAction(translations[self.current_language]['logs'], self.parent)
+        self.action_view_logs.triggered.connect(self.parent.show_logs)
+        help_menu.addAction(self.action_view_logs)
 
     def show_about(self):
         """Show the about dialog"""

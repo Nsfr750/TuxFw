@@ -340,11 +340,6 @@ class WindowsFirewallManager(QMainWindow):
         self.toolbar = self.addToolBar('Main Toolbar')
         self.toolbar.setMovable(False)
         
-        # Add actions to the toolbar
-        # You can add more actions as needed
-        self.toolbar.addAction(self.menu_manager.action_about)
-        self.toolbar.addSeparator()
-        
         # Add a simple label to the toolbar
         self.status_label = QLabel(translations[self.current_language].get('status_ready', 'Ready'))
         self.toolbar.addWidget(self.status_label)
@@ -600,6 +595,34 @@ class WindowsFirewallManager(QMainWindow):
                 f"Failed to load initial data: {str(e)}"
             )
     
+    def add_rule_dialog(self):
+        """Show dialog to add a new firewall rule"""
+        try:
+            # Create and show the rule dialog
+            dialog = RuleDialog(self, self.firewall.translations.get(self.current_language, {}))
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                # Get the rule data from the dialog
+                rule = dialog.get_rule()
+                if rule:
+                    # Add the rule using the firewall manager
+                    if self.firewall.add_rule(rule):
+                        # Refresh the rules table
+                        self.load_rules()
+                        self.logger.log_firewall_event("RULE_ADDED", f"Added rule: {rule.get('name', 'Unnamed')}")
+                    else:
+                        QMessageBox.warning(
+                            self,
+                            translations[self.current_language].get('error', 'Error'),
+                            translations[self.current_language].get('add_rule_failed', 'Failed to add rule')
+                        )
+        except Exception as e:
+            self.logger.log_error(f"Error in add_rule_dialog: {e}")
+            QMessageBox.critical(
+                self,
+                translations[self.current_language].get('error', 'Error'),
+                f"Error adding rule: {str(e)}"
+            )
+
     def setup_connections(self):
         """Set up signal/slot connections"""
         # Connect menu actions
@@ -612,6 +635,15 @@ class WindowsFirewallManager(QMainWindow):
         # Connect language change signals
         for action in self.menu_manager.language_actions.actions():
             action.triggered.connect(lambda checked, lang=action.data(): self.change_language(lang))
+            
+        # Connect rule management buttons
+        if hasattr(self, 'add_rule_btn'):
+            self.add_rule_btn.clicked.connect(self.add_rule_dialog)
+            # Temporarily disable these until implemented
+            self.edit_rule_btn.setEnabled(False)
+            self.delete_rule_btn.setEnabled(False)
+            self.load_config_btn.setEnabled(False)
+            self.save_config_btn.setEnabled(False)
     
     def apply_ui_settings(self):
         """Apply UI-specific settings"""

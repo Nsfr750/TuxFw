@@ -1,4 +1,4 @@
-# Python Firewall Manager
+# TuxFw
 
 A comprehensive Windows firewall management application built with Python, PySide6, Wand, and QRCode.
 
@@ -13,21 +13,6 @@ A comprehensive Windows firewall management application built with Python, PySid
 - **User-friendly UI**: Intuitive interface built with PySide6
 - **Cross-platform**: Works on Windows, macOS, and Linux
 
-## Project Structure
-
-```bash
-firewall/
-├── script/                    # Main application files
-│   ├── firewall_manager.py    # PySide6 GUI application
-│   ├── main.py               # Application launcher
-│   └── firewall_config.json  # Firewall rules configuration
-├── lang/                     # Language files
-│   └── translations.py       # English/Italian translations
-├── main.py                   # Main entry point
-├── requirements.txt          # Python dependencies
-└── version.py               # Version information
-```
-
 ## Requirements
 
 - Python 3.8+
@@ -35,7 +20,9 @@ firewall/
 - Wand (ImageMagick bindings)
 - qrcode (QR code generation)
 - python-iptables (Linux firewall support)
-- Pillow (Image processing)
+- wheel
+- shiboken6
+- psutil
 
 ## Installation
 

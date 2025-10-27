@@ -126,6 +126,19 @@ class FirewallConfig:
             if not hasattr(self, 'config') or not isinstance(self.config, dict):
                 self.config = self.get_default_config()
                 return []
+            
+            # Handle old config format where rules are directly under firewall_rules
+            if "firewall_rules" in self.config and isinstance(self.config["firewall_rules"], list):
+                # Migrate old format to new format
+                self.config["profiles"] = {
+                    "default": {
+                        "rules": self.config["firewall_rules"]
+                    }
+                }
+                self.config["current_profile"] = "default"
+                # Remove the old key to avoid confusion
+                del self.config["firewall_rules"]
+                self.save_config()
                 
             # Ensure profiles exists and is a dictionary
             if "profiles" not in self.config or not isinstance(self.config["profiles"], dict):
@@ -146,10 +159,25 @@ class FirewallConfig:
             if "rules" not in self.config["profiles"][current_profile] or not isinstance(self.config["profiles"][current_profile]["rules"], list):
                 self.config["profiles"][current_profile]["rules"] = []
                 self.save_config()
+            
+            # Ensure each rule has all required fields
+            rules = self.config["profiles"][current_profile]["rules"]
+            for rule in rules:
+                if not isinstance(rule, dict):
+                    rules.remove(rule)
+                    continue
+                # Ensure required fields exist
+                rule.setdefault('id', str(uuid.uuid4()))
+                rule.setdefault('name', 'Unnamed Rule')
+                rule.setdefault('protocol', 'TCP')
+                rule.setdefault('port', '')
+                rule.setdefault('direction', 'IN')
+                rule.setdefault('action', 'ALLOW')
+                rule.setdefault('enabled', True)
                 
-            return self.config["profiles"][current_profile]["rules"]
+            return rules
         except Exception as e:
-            self.logger.log_error(f"Error getting rules: {e}")
+            self.logger.log_error(f"Error getting rules: {str(e)}")
             return []
 
     def add_rule(self, rule):
@@ -219,7 +247,7 @@ class FirewallConfig:
                 raise
             
         except Exception as e:
-            self.logger.log_error(f"Error updating settings: {e}", exc_info=True)
+            self.logger.log_error(f"Error updating settings: {e}")
             return False
 
     def update_ui(self):
