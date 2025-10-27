@@ -1,0 +1,63 @@
+name: Feature Request
+description: Suggest a new feature for the firewall application
+title: "[Feature] "
+labels: ["enhancement"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide details about what you'd like to see added to the application.
+
+  - type: textarea
+    id: feature_description
+    attributes:
+      label: Feature Description
+      description: Describe the feature you would like to see implemented
+      placeholder: |
+        What should this feature do?
+        Why would this be useful?
+        How should it work from a user perspective?
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_cases
+    attributes:
+      label: Use Cases
+      description: Describe specific scenarios where this feature would be helpful
+      placeholder: |
+        - Scenario 1: When user does X, they should be able to Y
+        - Scenario 2: For Z type of users, this would improve workflow
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Have you considered alternative ways to achieve this goal?
+      placeholder: |
+        - Current workaround you're using
+        - Other tools that provide similar functionality
+        - Why the current solution isn't sufficient
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Ideas
+      description: Any thoughts on how this feature could be implemented?
+      placeholder: |
+        - UI changes needed
+        - Backend modifications
+        - Integration with existing systems
+        - Dependencies or new libraries required
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Low (nice to have)
+        - Medium (should be considered)
+        - High (important feature)
+        - Critical (blocking issue)

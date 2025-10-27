@@ -1,0 +1,66 @@
+# Code Owners for Firewall Project
+# This file defines who owns different parts of the codebase
+
+# Global Owners - catch-all for anything not covered below
+* @Nsfr750
+
+# Project Configuration and Documentation
+README.md @Nsfr750
+CHANGELOG.md @Nsfr750
+requirements.txt @Nsfr750
+TO_DO.md @Nsfr750
+
+# Configuration Files
+config/ @Nsfr750
+docs/ @Nsfr750
+
+# Language and Translation Files
+lang/ @Nsfr750
+
+# UI Components
+UI/ @Nsfr750
+
+# Core Application Scripts
+script/ @Nsfr750
+
+# Logging System
+logs/ @Nsfr750
+
+# Assets and Resources
+assets/ @Nsfr750
+
+# Build and Compilation
+setup/ @Nsfr750
+
+# GitHub Specific Files
+.github/ @Nsfr750
+.gitignore @Nsfr750
+
+# Python Package Files
+pyproject.toml @Nsfr750
+setup.py @Nsfr750
+MANIFEST.in @Nsfr750
+
+# Test Files
+tests/ @Nsfr750
+
+# License and Legal
+LICENSE @Nsfr750
+LICENSE.txt @Nsfr750
+
+# Documentation
+*.md @Nsfr750
+
+# Security and CI/CD
+.github/workflows/ @Nsfr750
+.github/ISSUE_TEMPLATE/ @Nsfr750
+.github/PULL_REQUEST_TEMPLATE/ @Nsfr750
+
+# Release and Version Management
+version.py @Nsfr750
+version_info.txt @Nsfr750
+
+# Build Scripts
+compile_app.py @Nsfr750
+clean_pycache.py @Nsfr750
+clear_cache.py @Nsfr750
