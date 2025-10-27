@@ -7,11 +7,11 @@ from datetime import datetime
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QGroupBox, 
     QLabel, QComboBox, QFileDialog, QMessageBox, QSplitter, QFrame, 
-    QLineEdit, QCheckBox, QToolButton, QSizePolicy, QMenu, QProgressBar
+    QLineEdit, QCheckBox, QToolButton, QSizePolicy, QMenu, QProgressBar,
+    QStyle
 )
 from PySide6.QtCore import Qt, QTimer, QRegularExpression
 from PySide6.QtGui import QFont, QTextCharFormat, QColor, QTextCursor, QAction, QIcon
-from PySide6.QtWidgets import QStyle
 from lang.translations import translations
 
 
@@ -201,7 +201,7 @@ class ViewLogsWindow(QWidget):
         self.log_combo.setMinimumWidth(300)
         self.log_combo.currentIndexChanged.connect(self.on_log_file_changed)
         
-        refresh_btn = QPushButton()
+        refresh_btn = QToolButton()
         refresh_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_BrowserReload))
         refresh_btn.setToolTip(translations[self.current_language].get('refresh', 'Refresh'))
         refresh_btn.clicked.connect(self.load_log_files)
@@ -255,13 +255,14 @@ class ViewLogsWindow(QWidget):
         nav_layout = QHBoxLayout()
         nav_layout.setSpacing(2)
         
+        # Create navigation buttons with icons
         self.prev_match_btn = QToolButton()
-        self.prev_match_btn.setIcon(self.style().standardIcon(self.style().SP_ArrowUp))
+        self.prev_match_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowUp))
         self.prev_match_btn.setToolTip(translations[self.current_language].get('previous_match', 'Previous match'))
         self.prev_match_btn.clicked.connect(self.previous_match)
         
         self.next_match_btn = QToolButton()
-        self.next_match_btn.setIcon(self.style().standardIcon(self.style().SP_ArrowDown))
+        self.next_match_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowDown))
         self.next_match_btn.setToolTip(translations[self.current_language].get('next_match', 'Next match'))
         self.next_match_btn.clicked.connect(self.next_match)
         

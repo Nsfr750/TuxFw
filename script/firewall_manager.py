@@ -122,62 +122,103 @@ class FirewallConfig:
     def get_rules(self):
         """Get current firewall rules"""
         try:
+            # Debug: Log the type of self and available attributes
+            self.logger.log_debug(f"get_rules called. Type of self: {type(self)}")
+            self.logger.log_debug(f"Available attributes: {dir(self)}")
+            
             # Ensure config has the right structure
             if not hasattr(self, 'config') or not isinstance(self.config, dict):
+                self.logger.log_debug("Config not found or not a dict, getting default config")
                 self.config = self.get_default_config()
                 return []
             
+            # Make a copy of the config to avoid modifying it directly
+            config = self.config.copy()
+            needs_save = False
+            
             # Handle old config format where rules are directly under firewall_rules
-            if "firewall_rules" in self.config and isinstance(self.config["firewall_rules"], list):
+            if "firewall_rules" in config and isinstance(config["firewall_rules"], list):
+                self.logger.log_debug("Found old format config, migrating to new format")
                 # Migrate old format to new format
-                self.config["profiles"] = {
+                config["profiles"] = {
                     "default": {
-                        "rules": self.config["firewall_rules"]
+                        "rules": config["firewall_rules"]
                     }
                 }
-                self.config["current_profile"] = "default"
+                config["current_profile"] = "default"
                 # Remove the old key to avoid confusion
-                del self.config["firewall_rules"]
-                self.save_config()
+                del config["firewall_rules"]
+                needs_save = True
                 
             # Ensure profiles exists and is a dictionary
-            if "profiles" not in self.config or not isinstance(self.config["profiles"], dict):
-                self.config["profiles"] = {"default": {"rules": []}}
-                self.save_config()
-                return []
-            
+            if "profiles" not in config or not isinstance(config["profiles"], dict):
+                self.logger.log_debug("Profiles not found or not a dict, initializing")
+                config["profiles"] = {"default": {"rules": []}}
+                needs_save = True
+                
             # Get current profile, default to 'default' if not set
-            current_profile = self.config.get("current_profile", "default")
+            current_profile = config.get("current_profile", "default")
+            self.logger.log_debug(f"Current profile: {current_profile}")
             
             # Ensure the current profile exists and has a rules list
-            if not isinstance(self.config["profiles"].get(current_profile), dict):
-                self.config["profiles"][current_profile] = {"rules": []}
-                self.save_config()
-                return []
+            if not isinstance(config["profiles"].get(current_profile), dict):
+                self.logger.log_debug(f"Profile {current_profile} not found or not a dict, initializing")
+                config["profiles"][current_profile] = {"rules": []}
+                needs_save = True
                 
             # Ensure rules exists and is a list
-            if "rules" not in self.config["profiles"][current_profile] or not isinstance(self.config["profiles"][current_profile]["rules"], list):
-                self.config["profiles"][current_profile]["rules"] = []
-                self.save_config()
+            if "rules" not in config["profiles"][current_profile] or not isinstance(config["profiles"][current_profile]["rules"], list):
+                self.logger.log_debug("Rules not found or not a list, initializing")
+                config["profiles"][current_profile]["rules"] = []
+                needs_save = True
             
             # Ensure each rule has all required fields
-            rules = self.config["profiles"][current_profile]["rules"]
+            rules = config["profiles"][current_profile]["rules"]
+            self.logger.log_debug(f"Found {len(rules)} rules in profile {current_profile}")
+            
             for rule in rules:
                 if not isinstance(rule, dict):
+                    self.logger.log_debug("Found non-dict rule, removing")
                     rules.remove(rule)
+                    needs_save = True
                     continue
-                # Ensure required fields exist
-                rule.setdefault('id', str(uuid.uuid4()))
-                rule.setdefault('name', 'Unnamed Rule')
-                rule.setdefault('protocol', 'TCP')
-                rule.setdefault('port', '')
-                rule.setdefault('direction', 'IN')
-                rule.setdefault('action', 'ALLOW')
-                rule.setdefault('enabled', True)
+                    
+                # Check if any required fields are missing
+                required_fields = {
+                    'id': str(uuid.uuid4()),
+                    'name': 'Unnamed Rule',
+                    'protocol': 'TCP',
+                    'port': '',
+                    'direction': 'IN',
+                    'action': 'ALLOW',
+                    'enabled': True
+                }
                 
+                # Set any missing fields to their default values
+                for field, default_value in required_fields.items():
+                    if field not in rule:
+                        self.logger.log_debug(f"Adding missing field '{field}' to rule")
+                        rule[field] = default_value
+                        needs_save = True
+            
+            # Save the updated config if any changes were made
+            if needs_save:
+                self.logger.log_debug("Saving updated config")
+                self.config = config
+                if not hasattr(self, 'save_config'):
+                    self.logger.log_error("self.save_config does not exist!")
+                    self.logger.log_error(f"Type of self: {type(self)}")
+                    self.logger.log_error(f"Available methods: {[m for m in dir(self) if not m.startswith('__')]}")
+                    raise AttributeError("'dict' object has no attribute 'save_config'")
+                self.save_config()
+                
+            self.logger.log_debug(f"Returning {len(rules)} rules")
             return rules
+            
         except Exception as e:
-            self.logger.log_error(f"Error getting rules: {str(e)}")
+            self.logger.log_error(f"Error in get_rules: {type(e).__name__}: {str(e)}", exc_info=True)
+            import traceback
+            self.logger.log_error(f"Traceback: {traceback.format_exc()}")
             return []
 
     def add_rule(self, rule):
@@ -211,7 +252,8 @@ class FirewallConfig:
         return self.config.get("settings", {})
 
     def update_settings(self, settings):
-        """Update firewall settings
+        """
+        Update firewall settings
         
         Args:
             settings (dict): Dictionary of settings to update
@@ -220,14 +262,14 @@ class FirewallConfig:
             bool: True if settings were updated successfully, False otherwise
         """
         try:
-            if not isinstance(settings, dict):
-                self.logger.log_error(f"Invalid settings format: {settings}")
-                return False
-                
-            # Ensure settings dictionary exists in config
-            if 'settings' not in self.config or not isinstance(self.config['settings'], dict):
+            # Update the settings in the config
+            if 'settings' not in self.config:
                 self.config['settings'] = {}
+            self.config['settings'].update(settings)
             
+            # Save the updated configuration
+            if not self.save_config():
+                raise Exception("Failed to save configuration")
             # Store the current settings for rollback in case of error
             old_settings = self.config['settings'].copy()
             
@@ -713,12 +755,20 @@ class FirewallManager:
             self.translations = translations
             
         # Initialize config with translations
-        self.config = FirewallConfig(config_path, self.translations)
+        self._config = FirewallConfig(config_path, self.translations)
         
         # Set current language from config or default to 'en'
-        self.current_language = self.config.current_language
+        self.current_language = self._config.current_language
+        
+        # Initialize rules cache
+        self._rules = []
         
         self.logger.log_firewall_event("MANAGER_INIT", "Firewall manager initialized")
+    
+    @property
+    def config(self):
+        """Get the FirewallConfig instance"""
+        return self._config
     
     def get_status(self):
         """
@@ -818,7 +868,27 @@ class FirewallManager:
         Returns:
             list: List of firewall rules
         """
-        return self.config.get_rules()
+        try:
+            # Ensure _config is a FirewallConfig instance
+            if not hasattr(self, '_config') or not hasattr(self._config, 'get_rules'):
+                self.logger.log_error("Invalid or missing _config in FirewallManager")
+                return []
+                
+            # Use the FirewallConfig's get_rules method
+            rules = self._config.get_rules()
+            
+            # Ensure we always return a list
+            if not isinstance(rules, list):
+                self.logger.log_error("Rules is not a list, initializing empty rules list")
+                rules = []
+                
+            return rules
+            
+        except Exception as e:
+            self.logger.log_error(f"Error in FirewallManager.get_rules: {str(e)}")
+            import traceback
+            self.logger.log_error(f"Traceback: {traceback.format_exc()}")
+            return []
     
     def add_rule(self, rule):
         """

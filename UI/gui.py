@@ -747,10 +747,17 @@ class WindowsFirewallManager(QMainWindow):
             if not hasattr(self, 'rules_table'):
                 return
                 
-            rules = self.firewall.config.get_rules()
+            # Clear existing rules
+            self.rules_table.setRowCount(0)
+            
+            # Get rules from the firewall manager
+            rules = self.firewall.get_rules()
             self.rules_table.setRowCount(len(rules))
             
             for row, rule in enumerate(rules):
+                if not isinstance(rule, dict):
+                    continue
+                    
                 self.rules_table.setItem(row, 0, QTableWidgetItem(rule.get('name', '')))
                 self.rules_table.setItem(row, 1, QTableWidgetItem(rule.get('protocol', '')))
                 self.rules_table.setItem(row, 2, QTableWidgetItem(str(rule.get('port', ''))))
