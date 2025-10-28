@@ -279,6 +279,13 @@ class OpenVPNClient(VPNAPI):
         self.args: List[str] = list(self.config.get("args", []))
         # Windows-specific process flags
         self._creationflags = 0x08000000 if platform.system().lower().startswith("win") else 0
+        # Logging
+        self._log_sink = None
+        self._reader_thread = None
+        self._stop_read = False
+
+    def set_log_sink(self, sink):
+        self._log_sink = sink
     
     def connect(self) -> bool:
         try:
@@ -307,6 +314,23 @@ class OpenVPNClient(VPNAPI):
                 creationflags=self._creationflags,
                 text=True,
             )
+            # Start reader thread to stream stdout
+            if self.process.stdout is not None and self._log_sink is not None:
+                self._stop_read = False
+                import threading
+                def _reader():
+                    try:
+                        for line in self.process.stdout:
+                            if self._stop_read:
+                                break
+                            try:
+                                self._log_sink(line.rstrip())
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                self._reader_thread = threading.Thread(target=_reader, daemon=True)
+                self._reader_thread.start()
             self.connected = True
             return True
         except Exception as e:
@@ -323,6 +347,13 @@ class OpenVPNClient(VPNAPI):
                     self.process.wait(timeout=10)
                 except Exception:
                     self.process.kill()
+            # Stop reader
+            self._stop_read = True
+            if self._reader_thread and self._reader_thread.is_alive():
+                try:
+                    self._reader_thread.join(timeout=2)
+                except Exception:
+                    pass
             self.connected = False
             return True
         except Exception as e:
