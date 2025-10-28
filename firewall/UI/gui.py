@@ -145,7 +145,7 @@ class WindowsFirewallManager(QMainWindow):
             /* Base Colors */
             QMainWindow, QDialog, QWidget, QMenu {
                 background-color: #1e1e1e;
-                color: #e0e0e0;
+                color: #ffffff;
                 font-family: 'Segoe UI', 'Arial', sans-serif;
                 border: none;
             }
@@ -154,7 +154,7 @@ class WindowsFirewallManager(QMainWindow):
             QTextEdit, QPlainTextEdit, QLineEdit, QComboBox, QSpinBox, 
             QDoubleSpinBox, QDateEdit, QTimeEdit, QDateTimeEdit, QTableWidget {
                 background-color: #252526;
-                color: #e0e0e0;
+                color: #ffffff;
                 border: 1px solid #3e3e42;
                 border-radius: 3px;
                 padding: 5px 8px;
@@ -165,7 +165,7 @@ class WindowsFirewallManager(QMainWindow):
             /* Buttons */
             QPushButton, QToolButton {
                 background-color: #333333;
-                color: #e0e0e0;
+                color: #ffffff;
                 border: 1px solid #3e3e42;
                 border-radius: 3px;
                 padding: 5px 12px;
@@ -173,12 +173,12 @@ class WindowsFirewallManager(QMainWindow):
             }
             
             QPushButton:hover, QToolButton:hover {
-                background-color: #3e3e42;
+                background-color: #0d7d0d;
                 border: 1px solid #505050; 
             }
             
             QPushButton:pressed, QToolButton:pressed {
-                background-color: #2a2a2a;
+                background-color: #095609;
             }
             
             QPushButton:disabled, QToolButton:disabled {
@@ -219,7 +219,7 @@ class WindowsFirewallManager(QMainWindow):
             /* Headers and Sections */
             QHeaderView::section, QTableCornerButton::section {
                 background-color: #333333;
-                color: #e0e0e0;
+                color: #ffffff;
                 padding: 6px;
                 border: 1px solid #3e3e42;
                 text-align: left;
@@ -797,8 +797,25 @@ class WindowsFirewallManager(QMainWindow):
         self.status_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.status_label.setStyleSheet("font-family: monospace;")
         
-        # Toggle button
+        # Toggle button with green background and white text
         self.toggle_button = QPushButton()
+        self.toggle_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2e7d32;
+                color: white;
+                font-weight: bold;
+                padding: 8px 16px;
+                border: 1px solid #1b5e20;
+                border-radius: 4px;
+                min-width: 120px;
+            }
+            QPushButton:hover {
+                background-color: #1b5e20;
+            }
+            QPushButton:pressed {
+                background-color: #0d3e10;
+            }
+        """)
         self.toggle_button.clicked.connect(self.toggle_firewall)
         
         status_layout.addWidget(self.status_label)

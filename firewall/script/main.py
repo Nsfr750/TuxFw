@@ -15,9 +15,9 @@ if script_dir not in sys.path:
     sys.path.insert(0, script_dir)
 
 from PySide6.QtWidgets import QApplication
-from firewall_manager import FirewallManager
-from UI.gui import WindowsFirewallManager
-from logger import get_logger
+from firewall.script.firewall_manager import FirewallManager
+from firewall.UI.gui import WindowsFirewallManager
+from firewall.script.logger import get_logger
 
 def main():
     """Main application entry point"""

@@ -13,23 +13,60 @@ import shutil
 from pathlib import Path
 import argparse
 
-
 class AppCompiler:
     """Handle application compilation with PyInstaller"""
 
     def __init__(self):
         self.project_root = Path(__file__).parent.parent
-        self.script_dir = self.project_root / "script"
-        self.assets_dir = self.project_root / "assets"
+        self.script_dir = self.project_root / "firewall/script"
+        self.lang_dir = self.project_root / "firewall/lang"
+        self.config_dir = self.project_root / "firewall/config"
+        self.ui_dir = self.project_root / "firewall/UI"
+        self.assets_dir = self.project_root / "firewall/assets"
         self.dist_dir = self.project_root / "dist"
         self.build_dir = self.project_root / "build"
 
         # Application details
-        self.app_name = "Firewall"
+        self.app_name = "TuxFw"
         self.main_script = "main.py"
-        self.version_file = "assets/version_info.txt"
-        self.icon_file = "assets/icon.png"
-        self.logo_file = "assets/logo.png"
+        self.version_file = self.assets_dir / "version_info.txt"
+        self.icon_file = "icon.ico"
+        self.logo_file = "logo.png"
+        
+        # Ensure version file exists
+        if not self.version_file.exists():
+            version_info = """
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(0, 0, 1, 0),
+    prodvers=(0, 0, 1, 0),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          '040904B0',
+          [StringStruct('CompanyName', 'Tuxxle'),
+          StringStruct('FileDescription', 'TuxFw - Firewall Manager'),
+          StringStruct('FileVersion', '0.0.1'),
+          StringStruct('InternalName', 'TuxFw'),
+          StringStruct('LegalCopyright', '© 2025 Nsfr750. All rights reserved.'),
+          StringStruct('OriginalFilename', 'TuxFw.exe'),
+          StringStruct('ProductName', 'TuxFw'),
+          StringStruct('ProductVersion', '0.0.1')])
+      ]
+    ),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)"""
+            with open(self.version_file, 'w', encoding='utf-8') as f:
+                f.write(version_info.strip())
 
         # Ensure directories exist
         self.dist_dir.mkdir(exist_ok=True)
@@ -42,7 +79,7 @@ class AppCompiler:
             'PySide6',
             'wand',
             'qrcode',
-            'python-iptables'
+            'pip-nftables'
         ]
 
         missing_packages = []
@@ -92,14 +129,14 @@ class AppCompiler:
         # Base arguments
         args = [
             '--name', self.app_name,
-            '--version-file', str(self.assets_dir / self.version_file),
+            '--version-file', str(self.version_file),
             '--distpath', str(self.dist_dir),
             '--workpath', str(self.build_dir),
             '--clean'
         ]
 
         # Icon (if exists)
-        icon_path = self.assets_dir / self.icon_file
+        icon_path = self.assets_dir / self.icon_file if not self.icon_file.startswith('assets/') else self.project_root / self.icon_file
         if icon_path.exists():
             args.extend(['--icon', str(icon_path)])
 
@@ -127,7 +164,6 @@ class AppCompiler:
             '--hidden-import', 'PySide6.QtGui',
             '--hidden-import', 'wand',
             '--hidden-import', 'qrcode',
-            '--hidden-import', 'PIL',
         ])
 
         # Main script

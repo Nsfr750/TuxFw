@@ -7,7 +7,6 @@ import logging.handlers
 from datetime import datetime
 from pathlib import Path
 
-
 class FirewallLogger:
     """Advanced logger with daily rotation for the firewall application"""
 
@@ -129,13 +128,14 @@ class FirewallLogger:
         context = f"[{event_type}]" + (f" {kwargs}" if kwargs else "")
         self.logger.info(f"{context} {message}")
 
-    def log_error(self, error, context=""):
+    def log_error(self, error, context="", exc_info=False):
         """
         Log an error with context
 
         Args:
             error (Exception or str): Error to log
             context (str): Additional context about where the error occurred
+            exc_info (bool or tuple): Exception information to log (default: False)
         """
         if isinstance(error, Exception):
             error_msg = f"{type(error).__name__}: {str(error)}"
@@ -143,9 +143,18 @@ class FirewallLogger:
             error_msg = str(error)
 
         if context:
-            self.logger.error(f"[{context}] {error_msg}")
+            self.logger.error(f"[{context}] {error_msg}", exc_info=exc_info)
         else:
-            self.logger.error(error_msg)
+            self.logger.error(error_msg, exc_info=exc_info)
+            
+    def log_debug(self, message):
+        """
+        Log a debug message
+        
+        Args:
+            message (str): Debug message to log
+        """
+        self.logger.debug(message)
 
     def log_security_event(self, event_type, source_ip=None, destination_ip=None, port=None, action="BLOCKED", **kwargs):
         """

@@ -203,25 +203,21 @@ translations = {
         'error_unavailable': 'Service is currently unavailable. Please try again later.',
         'error_data_loss': 'Unrecoverable data loss or corruption occurred.',
         'error_unknown': 'An unknown error occurred.',
+    
+        # Menu & Mix
         'menu_language': 'Language',
         'menu_help': 'Help',
         'exit': 'Exit',
         'english': 'English',
         'italian': 'Italian',
-        'about': 'About',
-        'about_text': 'Python Firewall Manager\nVersion 0.0.1\n© 2025 Nsfr750 - All rights reserved',
         'logs': 'Logs',
         'select_log': 'Select Log',
         'export': 'Export',
-        'sponsors': 'Sponsors',
-        'sponsors_title': 'Support the Project',
-        'about_sponsors': 'About Supporting',
         'organization': 'Organization',
         'paypal_support': 'PayPal',
         'github_support': 'GitHub',
         'email_contact': 'Email',
         'website': 'Website',
-        'sponsors_footer': 'Thank you for your support!',
         'close': 'Close',
         'help': 'Help',
         'help_title': 'Firewall Manager Help',
@@ -240,21 +236,47 @@ translations = {
         'error_loading_log': 'Error loading log: {error}',
         'error_clearing_log': 'Error clearing log: {error}',
         'error_exporting_log': 'Error exporting log: {error}',
+        
+        # Sponsor dialog
         'sponsor': {
-            'window_title': 'Support Development',
+            'message': 'If you find this application useful, consider supporting its development.\n\nYour support helps cover hosting costs and encourages further development.',
+            'title': 'Support the Project',
+            'window_title': 'Support the Project',
+            'links': {
+                'github_sponsors': 'GitHub Sponsors',
+                'paypal': 'Donate with PayPal'
+            },
+            'monero': {
+                'label': 'Monero:',
+                'address': '47Jc6MC47WJVFhiQFYwHyBNQP5BEsjUPG6tc8R37FwcTY8K5Y3LvFzveSXoGiaDQSxDrnCUBJ5WBj6Fgmsfix8VPD4w3gXF'
+            },
             'qr_tooltip': 'Scan to donate XMR',
-            'ways_to_support': 'Ways to Support',
+            'ways_to_support': 'Ways to Support:',
             'other_ways': {
-                'title': 'Other Ways to Help',
-                'star': 'Star the project on',
+                'title': 'Other Ways to Help:',
+                'star': 'Star the project on ',
                 'report': 'Report bugs and suggest features',
-                'share': 'Share with others',
-                'contribute': 'Contribute code or documentation',
+                'share': 'Share with others that might find it useful'
             },
             'buttons': {
-                'copy_monero': 'Copy Monero Address',
-                'copied': 'Copied!',
-                'close': 'Close',
+                'donate_paypal': 'Donate with PayPal',
+                'copy_monero': 'Copy Monero Address'
+            }
+        },
+        
+        # About dialog
+        'about': {
+            'title': 'About TuxFw',
+            'copyright': '© 2025 Nsfr750 - All rights reserved',
+            'description': 'TuxFw - Firewall Manager',
+            'close': 'Close',
+            'systeminfo': {
+                'title': 'System Information',
+                'cpu': 'CPU: {cpu}',
+                'ram': 'RAM: {ram}',
+                'disk': 'Disk: {disk}',
+                'os': 'OS: {os}',
+                'python': 'Python: {python}'
             }
         }
     },
@@ -363,13 +385,10 @@ translations = {
         'english': 'Inglese',
         'italian': 'Italiano',
         'about': 'Informazioni',
-        'about_text': 'Gestore Firewall Python\nVersione 0.0.1\n© 2025 Nsfr750 - Tutti i diritti riservati',
+        'about_text': 'Gestore Firewall Python\nVersione 0.0.1\n 2025 Nsfr750 - Tutti i diritti riservati',
         'logs': 'Log',
         'select_log': 'Seleziona Log',
         'export': 'Esporta',
-        'sponsors': 'Sponsor',
-        'sponsors_title': 'Supporta il Progetto',
-        'about_sponsors': 'Informazioni sul Supporto',
         'organization': 'Organizzazione',
         'paypal_support': 'PayPal',
         'github_support': 'GitHub',
@@ -378,7 +397,7 @@ translations = {
         'sponsors_footer': 'Grazie per il tuo supporto!',
         'close': 'Chiudi',
         'help': 'Aiuto',
-        'help_title': 'Guida al Gestore Firewall',
+        'help_title': 'Aiuto Gestore Firewall',
         'getting_started': 'Per Iniziare',
         'rules_help': 'Gestione Regole',
         'config_help': 'Configurazione',
@@ -394,21 +413,38 @@ translations = {
         'error_loading_log': 'Errore nel caricamento del log: {error}',
         'error_clearing_log': 'Errore nella cancellazione del log: {error}',
         'error_exporting_log': 'Errore nell\'esportazione del log: {error}',
+        
+        # Sponsor dialog
         'sponsor': {
-            'window_title': 'Supporta lo Sviluppo',
-            'qr_tooltip': 'Scansiona per donare XMR',
-            'ways_to_support': 'Modi per Supportare',
-            'other_ways': {
-                'title': 'Altri Modi per Aiutare',
-                'star': 'Metti una stella al progetto su',
-                'report': 'Segnala bug e suggerisci funzionalità',
-                'share': 'Condividi con altri',
-                'contribute': 'Contribuisci con codice o documentazione'
-            },
-            'buttons': {
-                'copy_monero': 'Copia Indirizzo Monero',
-                'copied': 'Copiato!',
-                'close': 'Chiudi'
+            "sponsor.message": "Se trovi questa applicazione utile, considera di supportare il suo sviluppo.\n\nIl tuo supporto aiuta a coprire i costi di hosting e incoraggia lo sviluppo ulteriore.",  
+            "sponsor.title": "Supporta il Progetto",
+            "sponsor.window_title": "Supporta il Progetto",
+            "sponsor.links.github_sponsors": "GitHub Sponsors",
+            "sponsor.links.paypal": "Dona con PayPal",
+            "sponsor.monero.label": "Monero:",
+            "sponsor.qr_tooltip": "Scansiona per donare XMR",
+            "sponsor.ways_to_support": "Modalità di supporto:", 
+            "sponsor.other_ways.title": "Altre modalità di supporto:",
+            "sponsor.other_ways.star": "Assegna una Stella al progetto su ",
+            "sponsor.other_ways.report": "Segnala errori e suggerisci funzionalità",
+            "sponsor.other_ways.share": "Condividi con altri che potrebbero trovarla utile",
+            "sponsor.buttons.donate_paypal": "Donazione con PayPal",
+            "sponsor.buttons.copy_monero": "Copia indirizzo Monero",
+        },
+
+        # About dialog
+        'about': {
+            'title': 'Informazioni TuxFw',
+            'copyright': '© 2025 Nsfr750 - Tutti i diritti riservati',
+            'description': 'TuxFw - Firewall Manager',
+            'close': 'Chiudi',
+            'systeminfo': {
+                'title': 'Sistema',
+                'cpu': 'CPU: {cpu}',
+                'ram': 'RAM: {ram}',
+                'disk': 'Disco: {disk}',
+                'os': 'Sistema Operativo: {os}',
+                'python': 'Python: {python}'
             }
         },
         
@@ -583,15 +619,11 @@ translations = {
         'logs': 'Log',
         'select_log': 'Seleziona Log',
         'export': 'Esporta',
-        'sponsors': 'Sponsor',
-        'sponsors_title': 'Supporta il Progetto',
-        'about_sponsors': 'Informazioni sul Supporto',
         'organization': 'Organizzazione',
         'paypal_support': 'PayPal',
         'github_support': 'GitHub',
         'email_contact': 'Email',
         'website': 'Sito Web',
-        'sponsors_footer': 'Grazie per il tuo supporto!',
         'close': 'Chiudi',
         'help': 'Aiuto',
         'help_title': 'Aiuto Gestore Firewall',
@@ -609,23 +641,6 @@ translations = {
         'error_loading_logs': 'Errore nel caricamento dei log: {error}',
         'error_loading_log': 'Errore nel caricamento del log: {error}',
         'error_clearing_log': 'Errore nella cancellazione del log: {error}',
-        'error_exporting_log': 'Errore nell\'esportazione del log: {error}',
-        'sponsor': {
-            'window_title': 'Supporta lo Sviluppo',
-            'qr_tooltip': 'Scansiona per donare XMR',
-            'ways_to_support': 'Modi per Supportare',
-            'other_ways': {
-                'title': 'Altri Modi per Aiutare',
-                'star': 'Metti una stella al progetto su',
-                'report': 'Segnala bug e suggerisci funzionalità',
-                'share': 'Condividi con altri',
-                'contribute': 'Contribuisci con codice o documentazione'
-            },
-            'buttons': {
-                'copy_monero': 'Copia Indirizzo Monero',
-                'copied': 'Copiato!',
-                'close': 'Chiudi'
-            }
-        }
+        'error_exporting_log': 'Errore nell\'esportazione del log: {error}'
     }
 }

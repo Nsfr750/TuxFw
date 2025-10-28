@@ -5,12 +5,21 @@ import os
 import json
 import sys
 import uuid
+import platform
+from typing import Dict, List, Optional, Any, Union
 from PySide6.QtWidgets import (
     QDialog, QFormLayout, QWidget, QLineEdit, 
-    QComboBox, QCheckBox, QDialogButtonBox, QFileDialog
+    QComboBox, QCheckBox, QDialogButtonBox, QFileDialog, QMessageBox
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QCoreApplication
 from logger import get_logger
+
+# Import nftables manager
+try:
+    from .nftables_manager import NFTablesManager
+except ImportError:
+    # Fallback for direct script execution
+    from nftables_manager import NFTablesManager
 
 class FirewallConfig:
     """
@@ -763,7 +772,47 @@ class FirewallManager:
         # Initialize rules cache
         self._rules = []
         
+        # Initialize nftables manager
+        self.nft = None
+        self._init_nftables()
+        
         self.logger.log_firewall_event("MANAGER_INIT", "Firewall manager initialized")
+    
+    def _init_nftables(self):
+        """Initialize the nftables manager."""
+        try:
+            self.nft = NFTablesManager(logger=self.logger)
+            self.logger.log_info("Successfully initialized nftables manager")
+            return True
+        except RuntimeError as e:
+            self.logger.log_error(f"Failed to initialize nftables: {e}")
+            self._show_error(
+                "NFTables Initialization Error",
+                f"Failed to initialize nftables: {e}\n\n"
+                "Please ensure nftables is installed and you have sufficient permissions."
+            )
+            return False
+        except Exception as e:
+            self.logger.log_error(f"Unexpected error initializing nftables: {e}")
+            return False
+    
+    def _show_error(self, title: str, message: str):
+        """Show an error message dialog."""
+        try:
+            # Try to use Qt to show the error if we're in a GUI context
+            app = QCoreApplication.instance()
+            if app is not None:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Critical)
+                msg.setWindowTitle(title)
+                msg.setText(message)
+                msg.exec()
+            else:
+                # Fallback to console output
+                print(f"ERROR: {title}\n{message}")
+        except Exception as e:
+            self.logger.log_error(f"Error showing error dialog: {e}")
+            print(f"ERROR: {title}\n{message}")
     
     @property
     def config(self):
@@ -808,23 +857,157 @@ class FirewallManager:
             self.logger.log_error(f"Error toggling firewall: {e}")
             return False
     
-    def apply_rules(self):
+    def _convert_rule_to_nftables(self, rule: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Apply the current firewall rules to the system
+        Convert an internal rule format to nftables format.
+        
+        Args:
+            rule: The rule to convert
+            
+        Returns:
+            dict: The rule in nftables format
+        """
+        # This is a basic conversion - you'll need to adapt this to your actual rule format
+        nft_rule = {
+            'table': 'filter',  # Default table
+            'chain': 'INPUT',   # Default chain
+            'handle': rule.get('id'),
+            'comment': rule.get('description', ''),
+            'expr': []
+        }
+        
+        # Map protocol
+        if 'protocol' in rule:
+            nft_rule['expr'].append({
+                'match': {
+                    'op': '==',
+                    'left': {'protocol': rule['protocol']},
+                    'right': rule['protocol']
+                }
+            })
+        
+        # Map ports
+        if 'dport' in rule:
+            nft_rule['expr'].append({
+                'match': {
+                    'op': '==',
+                    'left': {'dport': rule['dport']},
+                    'right': rule['dport']
+                }
+            })
+        
+        # Map action (accept, drop, reject)
+        action = rule.get('action', 'accept').lower()
+        nft_rule['expr'].append({'verdict': action.upper()})
+        
+        return nft_rule
+    
+    def _create_default_nftables_config(self) -> Dict:
+        """Create a default nftables configuration."""
+        return {
+            'nftables': [
+                # Flush existing rules
+                {'flush': {'ruleset': None}},
+                
+                # Define tables
+                {'add': {'table': {'family': 'ip', 'name': 'filter'}}},
+                
+                # Define chains
+                {'add': {'chain': {
+                    'family': 'ip',
+                    'table': 'filter',
+                    'name': 'INPUT',
+                    'type': 'filter',
+                    'hook': 'input',
+                    'prio': 0,
+                    'policy': 'drop'
+                }}},
+                
+                # Default allow localhost
+                {'add': {'rule': {
+                    'family': 'ip',
+                    'table': 'filter',
+                    'chain': 'INPUT',
+                    'expr': [
+                        {'ct': {'state': 'related,established'}},
+                        {'accept': None}
+                    ]
+                }}},
+                {'add': {'rule': {
+                    'family': 'ip',
+                    'table': 'filter',
+                    'chain': 'INPUT',
+                    'expr': [
+                        {'iifname': 'lo'},
+                        {'accept': None}
+                    ]
+                }}},
+                
+                # Default allow ICMP
+                {'add': {'rule': {
+                    'family': 'ip',
+                    'table': 'filter',
+                    'chain': 'INPUT',
+                    'expr': [
+                        {'protocol': 'icmp'},
+                        {'accept': None}
+                    ]
+                }}}
+            ]
+        }
+    
+    def apply_rules(self) -> bool:
+        """
+        Apply the current firewall rules to the system using nftables.
         
         Returns:
             bool: True if the operation was successful, False otherwise
         """
+        if not self.nft:
+            self.logger.log_error("Cannot apply rules: nftables not initialized")
+            return False
+            
         try:
-            # In a real implementation, this would apply the rules to the system firewall
-            rules = self.config.get_rules()
-            self.logger.log_firewall_event(
-                "RULES_APPLIED", 
-                f"Applied {len(rules)} firewall rules"
-            )
-            return True
+            # Get current rules from config
+            rules = self.get_rules()
+            
+            # Create a new ruleset
+            ruleset = self._create_default_nftables_config()
+            
+            # Add user-defined rules
+            for rule in rules:
+                try:
+                    nft_rule = self._convert_rule_to_nftables(rule)
+                    ruleset['nftables'].append({
+                        'add': {
+                            'rule': {
+                                'family': 'ip',
+                                'table': nft_rule['table'],
+                                'chain': nft_rule['chain'],
+                                'expr': nft_rule['expr']
+                            }
+                        }
+                    })
+                except Exception as e:
+                    self.logger.log_error(f"Error converting rule {rule.get('id')} to nftables: {e}")
+            
+            # Apply the ruleset
+            success = self.nft.apply_ruleset(ruleset)
+            
+            if success:
+                self.logger.log_firewall_event(
+                    "RULES_APPLIED", 
+                    f"Successfully applied {len(rules)} nftables rules"
+                )
+            else:
+                self.logger.log_error("Failed to apply nftables ruleset")
+                
+            return success
+            
         except Exception as e:
-            self.logger.log_error(f"Error applying rules: {e}")
+            self.logger.log_error(f"Error applying nftables rules: {e}")
+            import traceback
+            self.logger.log_error(f"Traceback: {traceback.format_exc()}")
             return False
     
     def change_language(self, language):

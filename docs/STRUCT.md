@@ -1,47 +1,41 @@
 # TuxFw Project Structure
 
 ```text
+
 TuxFw/
-├── script/                   # Main application scripts
-│   ├── firewall_manager.py   # Core firewall management logic
-│   ├── logger.py             # Logger implementation
-│   ├── main.py               # Application entry point
-│   └── version.py            # Version information
-│
-├── UI/                       # User interface components
-│   ├── about.py              # About dialog implementation
-│   ├── gui.py                # Main GUI implementation
-│   ├── help.py               # Help dialog implementation
-│   ├── menu.py               # Menu implementation
-│   ├── sponsor.py            # Sponsor dialog implementation
-│   └── view_logs.py          # Log viewing functionality
-│
-├── assets/                   # Static assets
-│   ├── icon.png              # Application icon
-│   ├── icon.ico              # Application icon
-│   └── logo.png              # Application logo
-│
-├── config/                   # Configuration files
-│   └── firewall_config.json  # Firewall rules and settings
-│
-├── docs/                     # Documentation
-│   ├── STRUCT.md             # Project structure documentation
-│   └── SECURITY.md           # Security policy and guidelines
-│
-├── lang/                     # Internationalization
-│   ├── language_manager.py   # Language manager implementation
-│   └── translations.py       # Translation strings
-│
-├── logs/                     # Application logs
-│
-├── tests/                    # Test files
-│
-├── .gitignore                # Git ignore file
-├── CHANGELOG.md              # Version history
-├── LICENSE                   # License information (GPLv3)
-├── README.md                 # Project README
-├── requirements.txt          # Python dependencies
-└── TO_DO.md                  # TODO list
+├── firewall/
+│   ├── script/                     # Main application scripts
+│   │   ├── firewall_manager.py     # Core firewall management logic
+│   │   ├── logger.py               # Logger implementation
+│   │   ├── main.py                 # Application entry point
+│   │   └── version.py              # Version information│
+│   ├── UI/                         # User interface components
+│   │   ├── about.py                # About dialog implementation
+│   │   ├── gui.py                  # Main GUI implementation
+│   │   ├── help.py                 # Help dialog implementation
+│   │   ├── menu.py                 # Menu implementation
+│   │   ├── sponsor.py              # Sponsor dialog implementation
+│   │   └── view_logs.py            # Log viewing functionality
+│   ├── assets/                     # Static assets
+│   │   ├── icon.png                # Application icon
+│   │   ├── icon.ico                # Application icon
+│   │   └── logo.png                # Application logo
+│   └── lang/                       # Internationalization
+│       ├── language_manager.py     # Language manager implementation（）
+│       └── translations.py         # Translation strings
+├── config/                         # Configuration files
+│   └── firewall_config.json        # Firewall rules and settings
+├── docs/                           # Documentation
+│   ├── STRUCT.md                   # Project structure documentation
+│   └── SECURITY.md                 # Security policy and guidelines
+├── logs/                           # Application logs
+├── tests/                          # Test files
+├── .gitignore                      # Git ignore file
+├── CHANGELOG.md                    # Version history
+├── LICENSE                         # License information (GPLv3)
+├── README.md                       # Project README
+├── requirements.txt                # Python dependencies
+└── TO_DO.md                        # TODO list
 
 ```
 
