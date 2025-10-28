@@ -210,12 +210,14 @@ class FirewallConfig:
             if needs_save:
                 self.logger.log_debug("Saving updated config")
                 self.config = config
-                if not hasattr(self, 'save_config'):
-                    self.logger.log_error("self.save_config does not exist!")
-                    self.logger.log_error(f"Type of self: {type(self)}")
-                    self.logger.log_error(f"Available methods: {[m for m in dir(self) if not m.startswith('__')]}")
-                    raise AttributeError("'dict' object has no attribute 'save_config'")
-                self.save_config()
+                try:
+                    # Save the config to file
+                    with open(self.config_path, 'w', encoding='utf-8') as f:
+                        json.dump(self.config, f, indent=4, ensure_ascii=False)
+                    self.logger.log_debug("Config saved successfully")
+                except Exception as e:
+                    self.logger.log_error(f"Failed to save config: {str(e)}")
+                    return False
                 
             self.logger.log_debug(f"Returning {len(rules)} rules")
             return rules

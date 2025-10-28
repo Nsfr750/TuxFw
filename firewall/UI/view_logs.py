@@ -5,11 +5,12 @@ import os
 import re
 from datetime import datetime
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QGroupBox, 
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QGroupBox, 
     QLabel, QComboBox, QFileDialog, QMessageBox, QSplitter, QFrame, 
     QLineEdit, QCheckBox, QToolButton, QSizePolicy, QMenu, QProgressBar,
     QStyle
 )
+import sys
 from PySide6.QtCore import Qt, QTimer, QRegularExpression
 from PySide6.QtGui import QFont, QTextCharFormat, QColor, QTextCursor, QAction, QIcon
 from firewall.lang.translations import translations
@@ -377,7 +378,7 @@ class ViewLogsWindow(QWidget):
             if self.log_files:
                 self.log_combo.setCurrentIndex(0)
                 self.current_log_file = self.log_files[0]
-                self.load_log_file(self.current_log_file)
+                self.load_selected_log()
             else:
                 self.status_label.setText("No log files found")
                 self.log_text.clear()
@@ -385,83 +386,41 @@ class ViewLogsWindow(QWidget):
             self.log_combo.blockSignals(False)
             
         except Exception as e:
-            self.status_label.setText(f"Error loading log files: {str(e)}")
-            self.logger.log_error(f"Failed to load log files: {e}", "ViewLogs.load_log_files")
-            # Clear and disable UI elements on error
-            self.log_combo.clear()
-            self.log_text.clear()
-            self.log_combo.setEnabled(False)
-            self.clear_btn.setEnabled(False)
-            self.export_btn.setEnabled(False)
-    
-    def load_log_file(self, file_path):
-        """Load and display the specified log file"""
-        try:
-            self.progress_bar.show()
-            self.progress_bar.setValue(0)
-            self.status_label.setText(f"{translations[self.current_language].get('loading', 'Loading')} {os.path.basename(file_path)}...")
-            
-            # Read the file in chunks to handle large files
-            chunk_size = 8192
-            total_size = os.path.getsize(file_path)
-            bytes_read = 0
-            
-            self.log_text.clear()
-            cursor = self.log_text.textCursor()
-            
-            with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
-                while True:
-                    chunk = f.read(chunk_size)
-                    if not chunk:
-                        break
-                        
-                    cursor.insertText(chunk)
-                    bytes_read += len(chunk)
-                    progress = int((bytes_read / total_size) * 100)
-                    self.progress_bar.setValue(progress)
-                    QApplication.processEvents()
-            
-            # Apply syntax highlighting
-            self.highlight_log_levels()
-            
-            # Update line count
-            line_count = self.log_text.document().lineCount()
-            self.line_count_label.setText(f"{line_count} {translations[self.current_language].get('lines', 'lines')}")
-            
-            # Scroll to bottom
-            self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())
-            
-            self.status_label.setText(f"{translations[self.current_language].get('loaded', 'Loaded')} {os.path.basename(file_path)}")
-            
-        except Exception as e:
-            self.status_label.setText(f"{translations[self.current_language].get('error_loading', 'Error loading')} {os.path.basename(file_path)}: {str(e)}")
-            self.logger.log_error(f"Failed to load log file {file_path}: {e}", "ViewLogs.load_log_file")
-        
-        finally:
-            self.progress_bar.hide()
+            error_msg = f"Error loading log files: {str(e)}"
+            self.status_label.setText(error_msg)
+            self.logger.log_error(error_msg, "ViewLogs.load_log_files")
+            QMessageBox.critical(
+                self,
+                translations[self.current_language].get('error', 'Error'),
+                error_msg
+            )
     
     def highlight_log_levels(self):
         """Apply syntax highlighting to log levels"""
-        if not self.log_text.toPlainText():
+        if not hasattr(self, 'log_text') or not self.log_text.toPlainText():
             return
             
         cursor = self.log_text.textCursor()
         cursor.movePosition(cursor.MoveOperation.Start)
         cursor.beginEditBlock()
         
-        # Clear existing formatting
-        cursor.select(cursor.SelectionType.Document)
-        cursor.setCharFormat(QTextCharFormat())
-        cursor.clearSelection()
-        
-        # Apply highlighting for each log level
-        for level, fmt in self.highlight_formats.items():
-            if level == 'SEARCH':
-                continue  # Skip search highlights for now
+        try:
+            # Clear existing formatting
+            cursor.select(cursor.SelectionType.Document)
+            cursor.setCharFormat(QTextCharFormat())
+            cursor.clearSelection()
+            
+            # Apply highlighting for each log level
+            for level, fmt in self.highlight_formats.items():
+                if level == 'SEARCH':
+                    continue  # Skip search highlights
+                self.highlight_text(fr'\b{level}\b', fmt)
                 
-            self.highlight_text(fr'\b{level}\b', fmt)
-        
-        cursor.endEditBlock()
+        except Exception as e:
+            self.logger.log_error(f"Error in highlight_log_levels: {str(e)}", "ViewLogs.highlight_log_levels")
+            
+        finally:
+            cursor.endEditBlock()
     
     def highlight_text(self, pattern, text_format):
         """Highlight text matching the given pattern"""
@@ -645,8 +604,9 @@ class ViewLogsWindow(QWidget):
                 cursor.setPosition(block.position())
                 cursor.movePosition(cursor.MoveOperation.Right, cursor.MoveMode.KeepAnchor, len(text))
                 
-                # Check if this line contains the selected log level
-                if selected_level in text.split():
+                # Check if this line contains the selected log level (case-insensitive)
+                text_upper = text.upper()
+                if selected_level.upper() in text_upper:
                     # Show lines with the selected log level
                     cursor.setCharFormat(QTextCharFormat())
                 else:
@@ -662,6 +622,12 @@ class ViewLogsWindow(QWidget):
             
         except Exception as e:
             self.logger.log_error(f"Error in filter_log_levels: {str(e)}", "ViewLogs.filter_log_levels")
+            # Show error to user
+            QMessageBox.warning(
+                self,
+                translations[self.current_language].get('error', 'Error'),
+                f"Error applying filter: {str(e)}"
+            )
             
         finally:
             # End edit block and ensure cursor is visible

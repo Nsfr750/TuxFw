@@ -658,7 +658,7 @@ class WindowsFirewallManager(QMainWindow):
         # This can be expanded to support different themes
         self.setStyleSheet("""
             QMainWindow, QDialog {
-                background-color: #6b6d6b;
+                background-color: #1e1e1e;
             }
             QTabWidget::pane {
                 border: 1px solid #c0c0c0;

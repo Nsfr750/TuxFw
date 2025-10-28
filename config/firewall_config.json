@@ -1,85 +1,61 @@
 {
-  "firewall_rules": [
-    {
-      "id": "rule_1",
-      "name": "Allow HTTP",
-      "description": "Allow incoming HTTP traffic",
-      "protocol": "TCP",
-      "port": "80",
-      "direction": "IN",
-      "action": "ALLOW",
-      "enabled": true,
-      "created_date": "2025-01-27"
+    "settings": {
+        "firewall_enabled": false,
+        "default_policy": "BLOCK",
+        "logging_enabled": true,
+        "log_level": "INFO",
+        "language": "it",
+        "theme": "default"
     },
-    {
-      "id": "rule_2",
-      "name": "Allow HTTPS",
-      "description": "Allow incoming HTTPS traffic",
-      "protocol": "TCP",
-      "port": "443",
-      "direction": "IN",
-      "action": "ALLOW",
-      "enabled": true,
-      "created_date": "2025-01-27"
+    "profiles": {
+        "default": {
+            "rules": [
+                {
+                    "id": "rule_1",
+                    "name": "Allow HTTP",
+                    "description": "Allow incoming HTTP traffic",
+                    "protocol": "TCP",
+                    "port": "80",
+                    "direction": "IN",
+                    "action": "ALLOW",
+                    "enabled": true,
+                    "created_date": "2025-01-27"
+                },
+                {
+                    "id": "rule_2",
+                    "name": "Allow HTTPS",
+                    "description": "Allow incoming HTTPS traffic",
+                    "protocol": "TCP",
+                    "port": "443",
+                    "direction": "IN",
+                    "action": "ALLOW",
+                    "enabled": true,
+                    "created_date": "2025-01-27"
+                },
+                {
+                    "id": "rule_3",
+                    "name": "Block SSH",
+                    "description": "Block incoming SSH connections",
+                    "protocol": "TCP",
+                    "port": "22",
+                    "direction": "IN",
+                    "action": "BLOCK",
+                    "enabled": true,
+                    "created_date": "2025-01-27"
+                },
+                {
+                    "id": "rule_4",
+                    "name": "Allow DNS",
+                    "description": "Allow DNS queries",
+                    "protocol": "UDP",
+                    "port": "53",
+                    "direction": "OUT",
+                    "action": "ALLOW",
+                    "enabled": true,
+                    "created_date": "2025-01-27"
+                }
+            ]
+        }
     },
-    {
-      "id": "rule_3",
-      "name": "Block SSH",
-      "description": "Block incoming SSH connections",
-      "protocol": "TCP",
-      "port": "22",
-      "direction": "IN",
-      "action": "BLOCK",
-      "enabled": true,
-      "created_date": "2025-01-27"
-    },
-    {
-      "id": "rule_4",
-      "name": "Allow DNS",
-      "description": "Allow DNS queries",
-      "protocol": "UDP",
-      "port": "53",
-      "direction": "OUT",
-      "action": "ALLOW",
-      "enabled": true,
-      "created_date": "2025-01-27"
-    }
-  ],
-  "settings": {
-    "firewall_enabled": false,
-    "default_policy": "BLOCK",
-    "logging_enabled": true,
-    "log_level": "INFO",
-    "language": "it",
-    "theme": "default"
-  },
-  "profiles": {
-    "work": {
-      "name": "Work Profile",
-      "description": "Secure profile for work environment",
-      "rules": [
-        "rule_1",
-        "rule_2",
-        "rule_4"
-      ]
-    },
-    "home": {
-      "name": "Home Profile",
-      "description": "Relaxed profile for home use",
-      "rules": [
-        "rule_1",
-        "rule_2",
-        "rule_3",
-        "rule_4"
-      ]
-    },
-    "public": {
-      "name": "Public Profile",
-      "description": "Highly secure profile for public networks",
-      "rules": [
-        "rule_4"
-      ]
-    }
-  },
-  "current_profile": "home"
+    "current_profile": "default"
 }
