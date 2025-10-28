@@ -3,18 +3,17 @@
 
 import os
 import re
+import json
+import csv
 from datetime import datetime
 from PySide6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, QGroupBox, 
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton, 
     QLabel, QComboBox, QFileDialog, QMessageBox, QSplitter, QFrame, 
-    QLineEdit, QCheckBox, QToolButton, QSizePolicy, QMenu, QProgressBar,
-    QStyle
+    QLineEdit, QCheckBox, QToolButton, QSizePolicy, QMenu, QGroupBox, QStyle
 )
-import sys
-from PySide6.QtCore import Qt, QTimer, QRegularExpression
+from PySide6.QtCore import Qt, QTimer, QRegularExpression, QSize
 from PySide6.QtGui import QFont, QTextCharFormat, QColor, QTextCursor, QAction, QIcon
 from firewall.lang.translations import translations
-
 
 class ViewLogsWindow(QWidget):
     """Enhanced log viewer with search, filtering, and dark theme support"""
@@ -27,9 +26,9 @@ class ViewLogsWindow(QWidget):
         self.current_log_file = None
         self.auto_refresh = False
         self.auto_refresh_interval = 5000  # 5 seconds
-        self.highlight_formats = {}
         self.search_matches = []
         self.current_match = -1
+        self._original_log_content = ""
         
         # Initialize highlight formats for log levels
         self.highlight_formats = {
@@ -48,6 +47,16 @@ class ViewLogsWindow(QWidget):
         # Initialize UI
         self.init_ui()
         self.setup_styles()
+        
+        # Set up auto-refresh timer
+        self.refresh_timer = QTimer(self)
+        self.refresh_timer.timeout.connect(self.load_selected_log)
+        
+        # Load initial log files
+        self.find_log_files()
+        if self.log_files:
+            self.log_combo.setCurrentIndex(0)
+            self.load_selected_log()
         
         # Setup auto-refresh timer
         self.refresh_timer = QTimer(self)
@@ -241,128 +250,96 @@ class ViewLogsWindow(QWidget):
         refresh_layout.addStretch()
         refresh_group.setLayout(refresh_layout)
         
-        # Add to top controls
-        top_controls.addWidget(file_group, 3)
-        top_controls.addWidget(refresh_group, 2)
-        
-        # Search and filter controls
-        search_group = QGroupBox(translations[self.current_language].get('search_filter', 'Search & Filter'))
-        search_layout = QHBoxLayout()
-        
-        # Search input
-        self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText(translations[self.current_language].get('search_placeholder', 'Search logs...'))
-        self.search_input.textChanged.connect(self.highlight_search_terms)
-        
-        # Case sensitivity
-        self.case_sensitive_cb = QCheckBox(translations[self.current_language].get('case_sensitive', 'Case Sensitive'))
-        self.case_sensitive_cb.stateChanged.connect(self.highlight_search_terms)
-        
-        # Regex toggle
-        self.regex_cb = QCheckBox('RegEx')
-        self.regex_cb.stateChanged.connect(self.highlight_search_terms)
-        
-        # Navigation buttons
-        nav_layout = QHBoxLayout()
-        nav_layout.setSpacing(2)
-        
-        # Create navigation buttons with icons
-        self.prev_match_btn = QToolButton()
-        self.prev_match_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowUp))
-        self.prev_match_btn.setToolTip(translations[self.current_language].get('previous_match', 'Previous match'))
-        self.prev_match_btn.clicked.connect(self.previous_match)
-        
-        self.next_match_btn = QToolButton()
-        self.next_match_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowDown))
-        self.next_match_btn.setToolTip(translations[self.current_language].get('next_match', 'Next match'))
-        self.next_match_btn.clicked.connect(self.next_match)
-        
-        nav_layout.addWidget(self.prev_match_btn)
-        nav_layout.addWidget(self.next_match_btn)
-        
-        # Add to search layout
-        search_layout.addWidget(self.search_input, 4)
-        search_layout.addWidget(self.case_sensitive_cb, 1)
-        search_layout.addWidget(self.regex_cb, 0)
-        search_layout.addLayout(nav_layout, 0)
-        search_group.setLayout(search_layout)
-        
-        # Log level filter - Using dropdown menu instead of checkboxes
-        level_group = QGroupBox(translations[self.current_language].get('log_levels', 'Log Level'))
-        level_layout = QHBoxLayout()
-        
-        # Create the dropdown menu for log levels
         self.level_combo = QComboBox()
-        self.level_combo.addItem(translations[self.current_language].get('all_levels', 'All Levels'), 'ALL')
-        self.level_combo.addItem('DEBUG', 'DEBUG')
-        self.level_combo.addItem('INFO', 'INFO')
-        self.level_combo.addItem('WARNING', 'WARNING')
-        self.level_combo.addItem('ERROR', 'ERROR')
-        self.level_combo.addItem('CRITICAL', 'CRITICAL')
+        self.level_combo.addItem("All Levels", "ALL")
+        self.level_combo.addItem("Debug+", "DEBUG")
+        self.level_combo.addItem("Info+", "INFO")
+        self.level_combo.addItem("Warning+", "WARNING")
+        self.level_combo.addItem("Error+", "ERROR")
+        self.level_combo.addItem("Critical", "CRITICAL")
         self.level_combo.currentIndexChanged.connect(self.filter_log_levels)
         
-        level_layout.addWidget(QLabel(translations[self.current_language].get('filter_by_level', 'Filter by level:')), 0)
-        level_layout.addWidget(self.level_combo, 1)
-        level_layout.addStretch()
-        level_group.setLayout(level_layout)
+        # Search box
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText(self.translations[self.current_language].get('search', 'Search...'))
+        self.search_edit.textChanged.connect(self.filter_log_levels)
+        
+        # Search buttons
+        self.search_prev_btn = QToolButton()
+        self.search_prev_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowUp))
+        self.search_prev_btn.setToolTip(self.translations[self.current_language].get('previous_match', 'Previous match'))
+        self.search_prev_btn.clicked.connect(lambda: self.search_text(forward=False))
+        
+        self.search_next_btn = QToolButton()
+        self.search_next_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowDown))
+        self.search_next_btn.setToolTip(self.translations[self.current_language].get('next_match', 'Next match'))
+        self.search_next_btn.clicked.connect(lambda: self.search_text(forward=True))
+        
+        # Add controls to layout
+        controls_layout.addWidget(QLabel(self.translations[self.current_language].get('log_file', 'Log File:')))
+        controls_layout.addWidget(self.log_combo)
+        controls_layout.addSpacing(10)
+        controls_layout.addWidget(QLabel(self.translations[self.current_language].get('log_level', 'Log Level:')))
+        controls_layout.addWidget(self.level_combo)
+        controls_layout.addSpacing(10)
+        controls_layout.addWidget(QLabel(self.translations[self.current_language].get('search', 'Search:')))
+        controls_layout.addWidget(self.search_edit)
+        controls_layout.addWidget(self.search_prev_btn)
+        controls_layout.addWidget(self.search_next_btn)
+        controls_layout.addStretch()
+        
+        # Auto-refresh toggle
+        self.auto_refresh_cb = QCheckBox(self.translations[self.current_language].get('auto_refresh', 'Auto-refresh'))
+        self.auto_refresh_cb.stateChanged.connect(self.toggle_auto_refresh)
+        controls_layout.addWidget(self.auto_refresh_cb)
+        
+        # Main log display
+        self.log_text = QTextEdit()
+        self.log_text.setReadOnly(True)
+        self.log_text.setFont(QFont("Consolas", 10))
+        
+        # Status bar
+        self.status_bar = QHBoxLayout()
+        self.status_label = QLabel()
+        self.line_count_label = QLabel()
+        self.status_bar.addWidget(self.status_label)
+        self.status_bar.addStretch()
+        self.status_bar.addWidget(self.line_count_label)
         
         # Action buttons
         btn_layout = QHBoxLayout()
         
-        self.clear_btn = QPushButton(translations[self.current_language].get('clear_logs', 'Clear Log'))
+        self.clear_btn = QPushButton(self.translations[self.current_language].get('clear_logs', 'Clear Log'))
         self.clear_btn.clicked.connect(self.clear_current_log)
         
-        self.export_btn = QPushButton(translations[self.current_language].get('export', 'Export'))
-        self.export_btn.clicked.connect(self.export_log)
+        self.export_btn = QPushButton(self.translations[self.current_language].get('export', 'Export'))
         
-        # Add a menu to the export button for different formats
-        export_menu = QMenu()
-        export_txt = export_menu.addAction('Text (.txt)')
-        export_csv = export_menu.addAction('CSV (.csv)')
-        export_json = export_menu.addAction('JSON (.json)')
-        
-        export_txt.triggered.connect(lambda: self.export_log('txt'))
-        export_csv.triggered.connect(lambda: self.export_log('csv'))
-        export_json.triggered.connect(lambda: self.export_log('json'))
-        
-        self.export_btn.setMenu(export_menu)
+        # Add Close button
+        self.close_btn = QPushButton(self.translations[self.current_language].get('close', 'Close'))
+        self.close_btn.clicked.connect(self.close)
         
         btn_layout.addWidget(self.clear_btn)
         btn_layout.addWidget(self.export_btn)
         btn_layout.addStretch()
-        
-        # Log display area
-        self.log_text = QTextEdit()
-        self.log_text.setReadOnly(True)
-        self.log_text.setFont(QFont('Consolas', 9))
-        self.log_text.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
-        
-        # Status bar
-        status_bar = QHBoxLayout()
-        
-        self.status_label = QLabel(translations[self.current_language].get('ready', 'Ready'))
-        self.status_label.setStyleSheet('padding: 2px 5px;')
-        
-        self.line_count_label = QLabel('0 lines')
-        self.line_count_label.setStyleSheet('padding: 2px 5px; border-left: 1px solid #3a3a3a;')
-        
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setMaximum(100)
-        self.progress_bar.setMaximumHeight(16)
-        self.progress_bar.setTextVisible(False)
-        self.progress_bar.hide()
-        
-        status_bar.addWidget(self.status_label, 1)
-        status_bar.addWidget(self.line_count_label, 0)
-        status_bar.addWidget(self.progress_bar, 2)
+        btn_layout.addWidget(self.close_btn)
         
         # Assemble main layout
-        main_layout.addLayout(top_controls, 0)
-        main_layout.addWidget(search_group, 0)
-        main_layout.addWidget(level_group, 0)
+        main_layout.addLayout(controls_layout)
         main_layout.addWidget(self.log_text, 1)
-        main_layout.addLayout(btn_layout, 0)
-        main_layout.addLayout(status_bar, 0)
+        main_layout.addLayout(btn_layout)
+        main_layout.addLayout(self.status_bar)
+        
+        self.setLayout(main_layout)
+
+    def create_text_format(self, fg_color, bg_color='transparent', bold=False):
+        """Create a text format with the given colors and style"""
+        fmt = QTextCharFormat()
+        fmt.setForeground(QColor(fg_color))
+        if bg_color != 'transparent':
+            fmt.setBackground(QColor(bg_color))
+        if bold:
+            fmt.setFontWeight(QFont.Weight.Bold)
+        return fmt
 
     def load_log_files(self):
         """Load available log files"""
@@ -401,390 +378,208 @@ class ViewLogsWindow(QWidget):
             self.logger.log_error(error_msg, "ViewLogs.load_log_files")
             QMessageBox.critical(
                 self,
-                translations[self.current_language].get('error', 'Error'),
+                self.translations[self.current_language].get('error', 'Error'),
                 error_msg
             )
-    
+
     def highlight_log_levels(self):
         """Apply syntax highlighting to log levels"""
-        if not hasattr(self, 'log_text') or not hasattr(self, 'highlight_formats') or not self.log_text.toPlainText():
+        if not hasattr(self, 'log_text') or not hasattr(self, 'highlight_formats'):
             return
-        
-        # Get the current cursor position and scroll position
+            
         cursor = self.log_text.textCursor()
-        scroll_bar = self.log_text.verticalScrollBar()
-        scroll_pos = scroll_bar.value()
-        cursor_pos = cursor.position()
-        
         cursor.beginEditBlock()
         
         try:
-            # First, clear all formatting
-            cursor.movePosition(cursor.MoveOperation.Start)
-            cursor.movePosition(cursor.MoveOperation.End, cursor.MoveMode.KeepAnchor)
+            # Clear existing formatting
+            cursor.select(QTextCursor.SelectionType.Document)
             cursor.setCharFormat(QTextCharFormat())
-            cursor.clearSelection()
             
             # Apply highlighting for each log level
             for level, fmt in self.highlight_formats.items():
                 if level == 'SEARCH':
-                    continue  # Skip search highlights
+                    continue  # Search highlighting is handled separately
                     
-                # Create a pattern that matches the log level at the start of the line
-                # after a timestamp or at the very beginning of the line
-                pattern = fr'(^|\[|\s)({re.escape(level)})(\s|:|\])'
-                self.highlight_text(pattern, fmt)
+                # Create a regex pattern to match the log level
+                pattern = QRegularExpression(f"\\b{re.escape(level)}\\b", 
+                                           QRegularExpression.PatternOption.CaseInsensitiveOption)
                 
-        except Exception as e:
-            error_msg = f"Error in highlight_log_levels: {str(e)}"
-            self.logger.log_error(error_msg, "ViewLogs.highlight_log_levels")
-            QMessageBox.warning(self, "Highlight Error", f"Error applying syntax highlighting: {str(e)}")
-            
+                if not pattern.isValid():
+                    continue
+                
+                # Find and format all matches
+                cursor.movePosition(QTextCursor.MoveOperation.Start)
+                while True:
+                    match = self.log_text.document().find(pattern, cursor)
+                    if match.isNull() or match.isNull():
+                        break
+                    
+                    # Apply the format
+                    cursor.setPosition(match.selectionStart())
+                    cursor.setPosition(match.selectionEnd(), QTextCursor.MoveMode.KeepAnchor)
+                    cursor.mergeCharFormat(fmt)
+                    
+                    # Move to the end of this match
+                    cursor.setPosition(match.selectionEnd())
         finally:
             cursor.endEditBlock()
-            
-            # Restore cursor position and scroll position
-            if cursor_pos <= len(self.log_text.toPlainText()):
-                cursor.setPosition(cursor_pos)
-                self.log_text.setTextCursor(cursor)
-            scroll_bar.setValue(scroll_pos)
-    
-    def highlight_text(self, pattern, text_format):
-        """Highlight text matching the given pattern"""
-        cursor = self.log_text.textCursor()
-        cursor.movePosition(cursor.MoveOperation.Start)
-        
-        # Create a regex pattern
-        flags = 0 if self.case_sensitive_cb.isChecked() else re.IGNORECASE
-        if not self.regex_cb.isChecked():
-            pattern = re.escape(pattern)
-            
-        try:
-            regex = re.compile(pattern, flags)
-        except re.error:
-            return  # Invalid regex
-            
-        # Find all matches
-        self.search_matches = []
-        text = self.log_text.toPlainText()
-        for match in regex.finditer(text):
-            self.search_matches.append(match.span())
-            
-        # Highlight matches
-        for start, end in self.search_matches:
-            cursor.setPosition(start)
-            cursor.movePosition(cursor.Right, cursor.KeepAnchor, end - start)
-            cursor.mergeCharFormat(text_format)
-    
-    def highlight_search_terms(self):
-        """Highlight search terms in the log"""
-        search_text = self.search_input.text().strip()
-        if not search_text:
-            self.highlight_log_levels()
-            self.current_match = -1
-            self.update_navigation_buttons()
-            return
-            
-        # First, reapply log level highlighting
-        self.highlight_log_levels()
-        
-        # Then apply search highlighting
-        if search_text:
-            flags = QTextDocument.FindFlags()
-            if self.case_sensitive_cb.isChecked():
-                flags |= QTextDocument.FindCaseSensitively
-                
-            # Find all matches
-            self.search_matches = []
-            cursor = self.log_text.textCursor()
-            cursor.movePosition(cursor.MoveOperation.Start)
-            
-            while True:
-                cursor = self.log_text.document().find(search_text, cursor, flags)
-                if cursor.isNull():
-                    break
-                self.search_matches.append((cursor.selectionStart(), cursor.selectionEnd()))
-            
-            # Highlight matches
-            cursor = self.log_text.textCursor()
-            cursor.beginEditBlock()
-            
-            for start, end in self.search_matches:
-                cursor.setPosition(start)
-                cursor.movePosition(cursor.Right, cursor.KeepAnchor, end - start)
-                cursor.mergeCharFormat(self.highlight_formats['SEARCH'])
-            
-            cursor.endEditBlock()
-            
-            # Update navigation buttons
-            self.current_match = -1
-            self.update_navigation_buttons()
-    
-    def update_navigation_buttons(self):
-        """Update the state of navigation buttons"""
-        has_matches = len(self.search_matches) > 0
-        self.prev_match_btn.setEnabled(has_matches)
-        self.next_match_btn.setEnabled(has_matches)
-        
-        if has_matches:
-            self.status_label.setText(f"{len(self.search_matches)} {translations[self.current_language].get('matches_found', 'matches found')}")
-        else:
-            self.status_label.setText(translations[self.current_language].get('no_matches', 'No matches found'))
-    
-    def next_match(self):
-        """Move to the next search match"""
-        if not self.search_matches:
-            return
-            
-        self.current_match = (self.current_match + 1) % len(self.search_matches)
-        self.scroll_to_match()
-    
-    def previous_match(self):
-        """Move to the previous search match"""
-        if not self.search_matches:
-            return
-            
-        self.current_match = (self.current_match - 1) % len(self.search_matches)
-        self.scroll_to_match()
-    
-    def scroll_to_match(self):
-        """Scroll to the current search match"""
-        if not self.search_matches or self.current_match < 0:
-            return
-            
-        start, end = self.search_matches[self.current_match]
-        
-        cursor = self.log_text.textCursor()
-        cursor.setPosition(start)
-        cursor.movePosition(cursor.Right, cursor.KeepAnchor, end - start)
-        self.log_text.setTextCursor(cursor)
-        self.log_text.centerCursor()
-        
-        # Update status
-        self.status_label.setText(f"{self.current_match + 1} {translations[self.current_language].get('of', 'of')} {len(self.search_matches)}")
-    
-    def on_log_file_changed(self, index):
-        """Handle log file selection change"""
-        if index < 0 or index >= len(self.log_files):
-            return
-            
-        self.current_log_file = self.log_files[index]
-        self.load_log_file(self.current_log_file)
-    
-    def toggle_auto_refresh(self, state):
-        """Toggle auto-refresh of the log file"""
-        self.auto_refresh = state == Qt.Checked
-        if self.auto_refresh:
-            self.refresh_timer.start(self.auto_refresh_interval)
-        else:
-            self.refresh_timer.stop()
-    
-    def update_refresh_interval(self, interval_str):
-        """Update the auto-refresh interval"""
-        try:
-            self.auto_refresh_interval = int(interval_str) * 1000  # Convert to milliseconds
-            if self.auto_refresh:
-                self.refresh_timer.start(self.auto_refresh_interval)
-        except ValueError:
-            pass
-    
-    def auto_refresh_log(self):
-        """Auto-refresh the current log file"""
-        if self.auto_refresh and self.current_log_file and os.path.exists(self.current_log_file):
-            self.load_log_file(self.current_log_file)
-    
+
     def filter_log_levels(self):
-        """Filter log messages by log level using the dropdown selection"""
-        if not hasattr(self, 'log_text') or not hasattr(self, 'level_combo') or not hasattr(self, 'highlight_formats'):
+        """Filter log messages by log level and search text"""
+        if not hasattr(self, 'log_text') or not hasattr(self, 'level_combo'):
             return
             
-        # Get the currently selected log level
-        selected_level = self.level_combo.currentData()
-        if not selected_level:
+        # Get filter criteria
+        current_level = self.level_combo.currentData()
+        search_text = self.search_edit.text().lower()
+        
+        # If no filters are active, show all content
+        if current_level == 'ALL' and not search_text:
+            self.log_text.setPlainText(self._original_log_content)
+            self.highlight_log_levels()
+            self.update_status()
             return
             
-        # Save scroll position and cursor
+        # Get the original content if we don't have it
+        if not hasattr(self, '_original_log_content'):
+            self._original_log_content = self.log_text.toPlainText()
+            
+        if not self._original_log_content:
+            return
+            
+        # Define log level priorities
+        level_priorities = {
+            'DEBUG': 0, 'INFO': 1, 'WARNING': 2, 'ERROR': 3, 'CRITICAL': 4
+        }
+        min_priority = level_priorities.get(current_level, 0) if current_level != 'ALL' else -1
+        
+        # Compile regex for log level detection
+        log_level_regex = re.compile(r'^(\d{2}:\d{2}:\d{2})\s+(DEBUG|INFO|WARNING|ERROR|CRITICAL)\s+', re.IGNORECASE)
+        
+        # Filter lines
+        filtered_lines = []
+        for line in self._original_log_content.split('\n'):
+            if not line.strip():
+                continue
+                
+            # Check log level
+            line_level = 'DEBUG'
+            match = log_level_regex.match(line)
+            if match:
+                line_level = match.group(2).upper()
+                
+            # Check if line matches level filter
+            level_ok = (current_level == 'ALL' or 
+                       level_priorities.get(line_level, 0) >= min_priority)
+                
+            # Check if line matches search text
+            search_ok = not search_text or search_text in line.lower()
+            
+            if level_ok and search_ok:
+                filtered_lines.append(line)
+        
+        # Update display
+        self.update_log_display('\n'.join(filtered_lines))
+        self.update_status(len(filtered_lines), current_level, search_text)
+
+    def update_log_display(self, content):
+        """Update the log display with the given content"""
+        # Save scroll position
         scroll_bar = self.log_text.verticalScrollBar()
         scroll_pos = scroll_bar.value() if scroll_bar else 0
-        cursor = self.log_text.textCursor()
-        cursor_pos = cursor.position()
         
-        # Get the document
-        document = self.log_text.document()
-        if not document:
+        # Update content
+        self.log_text.setPlainText(content)
+        
+        # Reapply highlighting
+        self.highlight_log_levels()
+        
+        # Restore scroll position if possible
+        if scroll_bar and scroll_pos <= scroll_bar.maximum():
+            scroll_bar.setValue(scroll_pos)
+
+    def update_status(self, filtered_count=0, current_level='ALL', search_text=''):
+        """Update the status bar with current filter information"""
+        if not hasattr(self, '_original_log_content'):
             return
+            
+        total_lines = len(self._original_log_content.split('\n'))
         
-        # Start edit block for batch operations
-        cursor.beginEditBlock()
+        # Build status text
+        status_parts = []
         
-        try:
-            # First, reset all text to visible
-            cursor.movePosition(cursor.MoveOperation.Start)
-            cursor.movePosition(cursor.MoveOperation.End, cursor.MoveMode.KeepAnchor)
+        if current_level != 'ALL':
+            status_parts.append(f"{current_level}+")
             
-            # Reset formatting
-            char_format = QTextCharFormat()
-            char_format.setProperty(QTextCharFormat.Property.FullWidthSelection, False)
-            char_format.setForeground(Qt.GlobalColor.black)  # Default text color
-            cursor.setCharFormat(char_format)
-            cursor.clearSelection()
+        if search_text:
+            status_parts.append(f'"{search_text}"')
             
-            # If 'All Levels' is selected, just reapply highlighting and return
-            if selected_level == 'ALL':
-                self.highlight_log_levels()
-                return
-                
-            # For specific log level filtering
-            block = document.firstBlock()
-            while block.isValid():
-                text = block.text()
-                cursor.setPosition(block.position())
-                cursor.movePosition(cursor.MoveOperation.Right, cursor.MoveMode.KeepAnchor, len(text))
-                
-                # Check if this line contains the selected log level
-                # Look for the log level at the start of the line or after a timestamp
-                log_level_found = False
-                
-                # Check for log level at the start of the line (after any whitespace)
-                log_level_pattern = r'^\s*(DEBUG|INFO|WARNING|ERROR|CRITICAL)\b'
-                match = re.search(log_level_pattern, text, re.IGNORECASE)
-                
-                if match:
-                    log_level = match.group(1).upper()
-                    log_level_found = (log_level == selected_level.upper())
-                
-                # If log level not found at the start, check anywhere in the line (as fallback)
-                if not log_level_found:
-                    log_level_found = (selected_level.upper() in text.upper())
-                
-                # Apply formatting based on whether the log level matches
-                if not log_level_found:
-                    # Hide lines that don't match the selected level
-                    hidden_format = QTextCharFormat()
-                    hidden_format.setForeground(QColor('transparent'))
-                    cursor.mergeCharFormat(hidden_format)
-                
-                block = block.next()
-                
-            # Reapply highlighting to visible text
-            self.highlight_log_levels()
-            
-        except Exception as e:
-            error_msg = f"Error in filter_log_levels: {str(e)}"
-            self.logger.log_error(error_msg, "ViewLogs.filter_log_levels")
-            if hasattr(self, 'status_label'):
-                self.status_label.setText(error_msg)
-            
-        finally:
-            try:
-                # End edit block
-                cursor.endEditBlock()
-                
-                # Restore cursor position if possible
-                if cursor_pos <= len(self.log_text.toPlainText()):
-                    cursor.setPosition(cursor_pos)
-                    self.log_text.setTextCursor(cursor)
-                
-                # Restore scroll position
-                if scroll_bar:
-                    scroll_bar.setValue(min(scroll_pos, scroll_bar.maximum()))
-                    
-            except Exception as e:
-                self.logger.log_error(f"Error in filter_log_levels (cleanup): {str(e)}", "ViewLogs.filter_log_levels")
-    
+        if status_parts:
+            status_text = f"{self.translations[self.current_language].get('filtered_by', 'Filtered by')}: {', '.join(status_parts)}"
+            self.status_label.setText(status_text)
+        else:
+            self.status_label.setText(self.translations[self.current_language].get('showing_all', 'Showing all entries'))
+        
+        # Update line count
+        self.line_count_label.setText(
+            f"{filtered_count} {self.translations[self.current_language].get('of', 'of')} "
+            f"{total_lines} {self.translations[self.current_language].get('entries', 'entries')}"
+        )
+
     def clear_current_log(self):
         """Clear the current log file"""
-        if not self.current_log_file:
+        if not hasattr(self, 'current_log_file') or not self.current_log_file or not os.path.exists(self.current_log_file):
             return
             
         reply = QMessageBox.question(
             self,
-            translations[self.current_language].get('confirm_clear', 'Confirm Clear'),
-            translations[self.current_language].get('confirm_clear_msg', 'Are you sure you want to clear this log file? This cannot be undone.'),
+            self.translations[self.current_language].get('confirm_clear', 'Confirm Clear'),
+            self.translations[self.current_language].get('confirm_clear_msg', 'Are you sure you want to clear this log file? This cannot be undone.'),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
         
         if reply == QMessageBox.StandardButton.Yes:
             try:
+                # Clear the file
                 with open(self.current_log_file, 'w', encoding='utf-8') as f:
                     f.write('')
                 
-                self.load_log_file(self.current_log_file)
-                self.status_label.setText(translations[self.current_language].get('log_cleared', 'Log file cleared'))
-                self.logger.log_firewall_event("LOG_CLEARED", f"Cleared log file: {os.path.basename(self.current_log_file)}")
+                # Update the display
+                self.log_text.clear()
+                self.search_matches = []
+                self.current_match = -1
+                self._original_log_content = ""
+                
+                # Update status
+                self.status_label.setText(self.translations[self.current_language].get('log_cleared', 'Log file cleared'))
+                self.line_count_label.setText('0 lines')
                 
             except Exception as e:
-                self.status_label.setText(f"{translations[self.current_language].get('error_clearing', 'Error clearing log')}: {str(e)}")
+                self.status_label.setText(f"{self.translations[self.current_language].get('error_clearing', 'Error clearing log')}: {str(e)}")
                 self.logger.log_error(f"Failed to clear log file: {e}", "ViewLogs.clear_current_log")
-    
-    def export_log(self, format='txt'):
-        """Export the current log to a file"""
-        if not self.current_log_file:
+
+    def search_text(self, forward=True):
+        """Search for text in the log"""
+        if not hasattr(self, 'log_text') or not hasattr(self, 'search_edit'):
             return
             
-        try:
-            default_name = os.path.splitext(os.path.basename(self.current_log_file))[0]
-            file_path, _ = QFileDialog.getSaveFileName(
-                self,
-                translations[self.current_language].get('export_log', 'Export Log'),
-                f"{default_name}.{format}",
-                f"{format.upper()} (*.{format});;All Files (*)"
-            )
+        search_text = self.search_edit.text()
+        if not search_text:
+            self.filter_log_levels()  # Re-apply filters without search
+            return
             
-            if file_path:
-                content = self.log_text.toPlainText()
-                
-                if format == 'csv':
-                    # Convert log lines to CSV format
-                    import csv
-                    lines = content.split('\n')
-                    with open(file_path, 'w', newline='', encoding='utf-8') as f:
-                        writer = csv.writer(f)
-                        writer.writerow(['Timestamp', 'Level', 'Message'])
-                        for line in lines:
-                            # Simple CSV conversion - adjust based on your log format
-                            parts = line.split(' - ', 2)
-                            if len(parts) >= 3:
-                                writer.writerow(parts)
-                            else:
-                                writer.writerow(['', '', line])
-                                
-                elif format == 'json':
-                    # Convert log lines to JSON format
-                    import json
-                    lines = content.split('\n')
-                    log_entries = []
-                    for line in lines:
-                        # Simple JSON conversion - adjust based on your log format
-                        parts = line.split(' - ', 2)
-                        if len(parts) >= 3:
-                            log_entries.append({
-                                'timestamp': parts[0],
-                                'level': parts[1],
-                                'message': parts[2]
-                            })
-                        else:
-                            log_entries.append({'message': line})
-                    
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        json.dump(log_entries, f, indent=2)
-                        
-                else:  # Plain text
-                    with open(file_path, 'w', encoding='utf-8') as f:
-                        f.write(content)
-                
-                self.status_label.setText(f"{translations[self.current_language].get('log_exported', 'Log exported to')} {os.path.basename(file_path)}")
-                self.logger.log_firewall_event("LOG_EXPORTED", f"Exported log to {file_path}")
-                
-        except Exception as e:
-            self.status_label.setText(f"{translations[self.current_language].get('error_exporting', 'Error exporting log')}: {str(e)}")
-            self.logger.log_error(f"Failed to export log: {e}", "ViewLogs.export_log")
-    
+        # Clear previous search highlights
+        self.clear_search_highlights()
     def closeEvent(self, event):
         """Handle window close event"""
         self.refresh_timer.stop()
         event.accept()
         
+    def on_log_file_changed(self, index):
+        """Handle log file selection change"""
+        if index >= 0:
+            self.load_selected_log()
+    
     def load_selected_log(self):
         """Load the selected log file"""
         try:

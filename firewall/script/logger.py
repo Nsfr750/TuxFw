@@ -155,6 +155,15 @@ class FirewallLogger:
             message (str): Debug message to log
         """
         self.logger.debug(message)
+        
+    def log_info(self, message):
+        """
+        Log an informational message
+        
+        Args:
+            message (str): Informational message to log
+        """
+        self.logger.info(message)
 
     def log_security_event(self, event_type, source_ip=None, destination_ip=None, port=None, action="BLOCKED", **kwargs):
         """

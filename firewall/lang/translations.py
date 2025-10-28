@@ -239,48 +239,46 @@ translations = {
         'error_exporting_log': 'Error exporting log: {error}',
         
         # Sponsor dialog
-        'sponsor': {
-            'message': 'If you find this application useful, consider supporting its development.\n\nYour support helps cover hosting costs and encourages further development.',
-            'title': 'Support the Project',
-            'window_title': 'Support the Project',
-            'links': {
-                'github_sponsors': 'GitHub Sponsors',
-                'paypal': 'Donate with PayPal'
-            },
-            'monero': {
-                'label': 'Monero:',
-                'address': '47Jc6MC47WJVFhiQFYwHyBNQP5BEsjUPG6tc8R37FwcTY8K5Y3LvFzveSXoGiaDQSxDrnCUBJ5WBj6Fgmsfix8VPD4w3gXF'
-            },
-            'qr_tooltip': 'Scan to donate XMR',
-            'ways_to_support': 'Ways to Support:',
-            'other_ways': {
-                'title': 'Other Ways to Help:',
-                'star': 'Star the project on ',
-                'report': 'Report bugs and suggest features',
-                'share': 'Share with others that might find it useful'
-            },
-            'buttons': {
-                'donate_paypal': 'Donate with PayPal',
-                'copy_monero': 'Copy Monero Address'
-            }
-        },
+        "sponsor.message": "If you find this application useful, consider supporting its development.\n\nYour support helps cover hosting costs and encourages further development.",  
+        "sponsor.title": "Support the Project",
+        "sponsor.window_title": "Support the Project",
+        "sponsor.links.github_sponsors": "GitHub Sponsors",
+        "sponsor.links.paypal": "Donate with PayPal",
+        "sponsor.monero.label": "Monero:",
+        "sponsor.qr_tooltip": "Scan to donate XMR",
+        "sponsor.ways_to_support": "Ways to Support:", 
+        "sponsor.other_ways.title": "Other Ways to Help:",
+        "sponsor.other_ways.star": "Star the project on ",
+        "sponsor.other_ways.report": "Report bugs and suggest features",
+        "sponsor.other_ways.share": "Share with others that might find it useful",
+        "sponsor.buttons.donate_paypal": "Donate with PayPal",
+        "sponsor.buttons.copy_monero": "Copy Monero Address",
+        "sponsor.address": "47Jc6MC47WJVFhiQFYwHyBNQP5BEsjUPG6tc8R37FwcTY8K5Y3LvFzveSXoGiaDQSxDrnCUBJ5WBj6Fgmsfix8VPD4w3gXF",
+        "sponsor.qr_tooltip": "Scan to donate XMR",
+        "sponsor.ways_to_support": "Ways to Support:",
+        "sponsor.other_ways.title": "Other Ways to Help:",
+        "sponsor.other_ways.star": "Star the project on ",
+        "sponsor.other_ways.report": "Report bugs and suggest features",
+        "sponsor.other_ways.share": "Share with others that might find it useful",
+        "common.close": "Close",
         
         # About dialog
-        'about': {
-            'title': 'About TuxFw',
-            'copyright': '© 2025 Nsfr750 - All rights reserved',
-            'description': 'TuxFw - Firewall Manager',
-            'close': 'Close',
-            'systeminfo': {
-                'title': 'System Information',
-                'cpu': 'CPU: {cpu}',
-                'ram': 'RAM: {ram}',
-                'disk': 'Disk: {disk}',
-                'os': 'OS: {os}',
-                'python': 'Python: {python}'
-            }
-        }
+        'about.title': 'About TuxFw',
+        'about.copyright': '© 2025 Nsfr750 - All rights reserved',
+        'about.description': 'TuxFw - Firewall Manager',
+        'about.close': 'Close',
+        'about.window_title': 'About TuxFw',
+        'sys_info_title': 'System Information',
+        'about.systeminfo': {
+        'about.systeminfo.title': 'System Information',
+        'about.systeminfo.cpu': 'CPU: {cpu}',
+        'about.systeminfo.ram': 'RAM: {ram}',
+        'about.systeminfo.disk': 'Disk: {disk}',
+        'about.systeminfo.os': 'OS: {os}',
+        'about.systeminfo.python': 'Python: {python}',
+        },
     },
+
     'it': {
         'app_title': 'TuxFw - Firewall Manager',
         'language': 'Lingua',
@@ -417,38 +415,43 @@ translations = {
         'error_exporting_log': 'Errore nell\'esportazione del log: {error}',
         
         # Sponsor dialog
-        'sponsor': {
-            "sponsor.message": "Se trovi questa applicazione utile, considera di supportare il suo sviluppo.\n\nIl tuo supporto aiuta a coprire i costi di hosting e incoraggia lo sviluppo ulteriore.",  
-            "sponsor.title": "Supporta il Progetto",
-            "sponsor.window_title": "Supporta il Progetto",
-            "sponsor.links.github_sponsors": "GitHub Sponsors",
-            "sponsor.links.paypal": "Dona con PayPal",
-            "sponsor.monero.label": "Monero:",
-            "sponsor.qr_tooltip": "Scansiona per donare XMR",
-            "sponsor.ways_to_support": "Modalità di supporto:", 
-            "sponsor.other_ways.title": "Altre modalità di supporto:",
-            "sponsor.other_ways.star": "Assegna una Stella al progetto su ",
-            "sponsor.other_ways.report": "Segnala errori e suggerisci funzionalità",
-            "sponsor.other_ways.share": "Condividi con altri che potrebbero trovarla utile",
-            "sponsor.buttons.donate_paypal": "Donazione con PayPal",
-            "sponsor.buttons.copy_monero": "Copia indirizzo Monero",
-        },
-
+        "sponsor.message": "Se trovi questa applicazione utile, considera di supportare il suo sviluppo.\n\nIl tuo supporto aiuta a coprire i costi di hosting e incoraggia lo sviluppo ulteriore.",  
+        "sponsor.title": "Supporta il Progetto",
+        "sponsor.window_title": "Supporta il Progetto",
+        "sponsor.links.github_sponsors": "GitHub Sponsors",
+        "sponsor.links.paypal": "Dona con PayPal",
+        "sponsor.monero.label": "Monero:",
+        "sponsor.qr_tooltip": "Scansiona per donare XMR",
+        "sponsor.ways_to_support": "Modalità di supporto:", 
+        "sponsor.other_ways.title": "Altre modalità di supporto:",
+        "sponsor.other_ways.star": "Assegna una Stella al progetto su ",
+        "sponsor.other_ways.report": "Segnala errori e suggerisci funzionalità",
+        "sponsor.other_ways.share": "Condividi con altri che potrebbero trovarla utile",
+        "sponsor.buttons.donate_paypal": "Donazione con PayPal",
+        "sponsor.buttons.copy_monero": "Copia indirizzo Monero",
+        "sponsor.address": "47Jc6MC47WJVFhiQFYwHyBNQP5BEsjUPG6tc8R37FwcTY8K5Y3LvFzveSXoGiaDQSxDrnCUBJ5WBj6Fgmsfix8VPD4w3gXF",
+        "sponsor.qr_tooltip": "Scansiona per donare XMR",
+        "sponsor.ways_to_support": "Modalità di supporto:",
+        "sponsor.other_ways.title": "Altre modalità di supporto:",
+        "sponsor.other_ways.star": "Assegna una Stella al progetto su ",
+        "sponsor.other_ways.report": "Segnala errori e suggerisci funzionalità",
+        "sponsor.other_ways.share": "Condividi con altri che potrebbero trovarla utile",
+        "common.close": "Chiudi",
+ 
         # About dialog
-        'about': {
-            'title': 'Informazioni TuxFw',
-            'copyright': '© 2025 Nsfr750 - Tutti i diritti riservati',
-            'description': 'TuxFw - Firewall Manager',
-            'close': 'Chiudi',
-            'systeminfo': {
-                'title': 'Sistema',
-                'cpu': 'CPU: {cpu}',
-                'ram': 'RAM: {ram}',
-                'disk': 'Disco: {disk}',
-                'os': 'Sistema Operativo: {os}',
-                'python': 'Python: {python}'
-            }
-        },
+        'about.title': 'Indormazioni TuxFw',
+        'about.copyright': '© 2025 Nsfr750 - All rights reserved',
+        'about.description': 'TuxFw - Firewall Manager',
+        'about.close': 'Chiudi',
+        'about.window_title': 'Indormazioni TuxFw',
+        'sys_info_title': 'Informazioni Sistema',
+        'about.systeminfo': 'Informazioni Sistema',
+        'about.systeminfo.title': 'Informazioni Sistema',
+        'about.systeminfo.cpu': 'CPU: {cpu}',
+        'about.systeminfo.ram': 'RAM: {ram}',
+        'about.systeminfo.disk': 'Disk: {disk}',
+        'about.systeminfo.os': 'OS: {os}',
+        'about.systeminfo.python': 'Python: {python}',
         
         # Logging and Error Messages
         'log_error': 'Errore: {error}',
@@ -643,6 +646,6 @@ translations = {
         'error_loading_logs': 'Errore nel caricamento dei log: {error}',
         'error_loading_log': 'Errore nel caricamento del log: {error}',
         'error_clearing_log': 'Errore nella cancellazione del log: {error}',
-        'error_exporting_log': 'Errore nell\'esportazione del log: {error}'
-    }
+        'error_exporting_log': 'Errore nell\'esportazione del log: {error}',
+    },
 }

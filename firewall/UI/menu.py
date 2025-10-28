@@ -68,6 +68,7 @@ class MenuManager:
 
         # Help
         self.action_help = QAction(translations[self.current_language]['help'], self.parent)
+        self.action_help.setShortcut("F1")
         self.action_help.triggered.connect(self.parent.show_help)
         help_menu.addAction(self.action_help)
 
@@ -75,11 +76,13 @@ class MenuManager:
 
         # About
         self.action_about = QAction(translations[self.current_language]['about'], self.parent)
+        self.action_about.setShortcut("F2")
         self.action_about.triggered.connect(self.show_about)
         help_menu.addAction(self.action_about)
 
-        # Sponsors
+        # Sponsor
         self.action_sponsor = QAction(translations[self.current_language]['sponsors'], self.parent)
+        self.action_sponsor.setShortcut("F3")
         self.action_sponsor.triggered.connect(self.parent.show_sponsors)
         help_menu.addAction(self.action_sponsor)
 
@@ -87,6 +90,7 @@ class MenuManager:
 
         # View Logs
         self.action_view_logs = QAction(translations[self.current_language]['logs'], self.parent)
+        self.action_view_logs.setShortcut("F4")
         self.action_view_logs.triggered.connect(self.parent.show_logs)
         help_menu.addAction(self.action_view_logs)
 

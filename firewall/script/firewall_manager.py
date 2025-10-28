@@ -257,7 +257,7 @@ class FirewallConfig:
     def get_settings(self):
         """Get firewall settings"""
         return self.config.get("settings", {})
-
+        
     def update_settings(self, settings):
         """
         Update firewall settings
@@ -272,31 +272,24 @@ class FirewallConfig:
             # Update the settings in the config
             if 'settings' not in self.config:
                 self.config['settings'] = {}
+                
+            # Update the settings
             self.config['settings'].update(settings)
             
-            # Save the updated configuration
+            # Save the configuration
             if not self.save_config():
                 raise Exception("Failed to save configuration")
-            # Store the current settings for rollback in case of error
-            old_settings = self.config['settings'].copy()
-            
-            try:
-                # Update the settings
-                self.config['settings'].update(settings)
                 
-                # Save the updated configuration
-                if not self.save_config():
-                    raise Exception("Failed to save configuration")
-                    
-                return True
+            # Update current_language if it was changed
+            if 'language' in settings:
+                self.current_language = settings['language']
                 
-            except Exception as e:
-                # Rollback to old settings if there was an error
-                self.config['settings'] = old_settings
-                raise
+            return True
             
         except Exception as e:
             self.logger.log_error(f"Error updating settings: {e}")
+            return False
+
             return False
 
     def update_ui(self):
@@ -305,30 +298,47 @@ class FirewallConfig:
 
     def change_language(self, language):
         """Change the application language"""
-        self.current_language = language
-        self.config.update_settings({"language": language})
-        self.logger.log_firewall_event("LANGUAGE_CHANGED", f"Changed language to {language}")
-        return True
-        self.tab_widget.setTabText(0, translations[self.current_language]['tab_status'])
-        self.tab_widget.setTabText(1, translations[self.current_language]['tab_rules'])
-        self.tab_widget.setTabText(2, translations[self.current_language]['tab_logs'])
-        self.tab_widget.setTabText(3, translations[self.current_language]['tab_qr'])
-        self.tab_widget.setTabText(4, translations[self.current_language]['tab_config'])
+        try:
+            # Update the language in settings
+            settings = self.config.get_settings()
+            settings['language'] = language
+            if not self.config.update_settings(settings):
+                raise Exception("Failed to update language setting")
+                
+            # Update current language
+            self.current_language = language
+            self.logger.log_firewall_event("LANGUAGE_CHANGED", f"Changed language to {language}")
+            
+            # Update UI elements if they exist
+            if hasattr(self, 'tab_widget') and self.tab_widget is not None:
+                self.tab_widget.setTabText(0, translations[self.current_language].get('tab_status', 'Status'))
+                self.tab_widget.setTabText(1, translations[self.current_language].get('tab_rules', 'Rules'))
+                self.tab_widget.setTabText(2, translations[self.current_language].get('tab_logs', 'Logs'))
+                self.tab_widget.setTabText(3, translations[self.current_language].get('tab_qr', 'QR'))
+                self.tab_widget.setTabText(4, translations[self.current_language].get('tab_config', 'Config'))
 
-        # Update table headers
-        headers = [
-            translations[self.current_language]['rule_name'],
-            translations[self.current_language]['protocol'],
-            translations[self.current_language]['port'],
-            translations[self.current_language]['direction'],
-            translations[self.current_language]['action'],
-            translations[self.current_language]['description'],
-            translations[self.current_language]['enabled']
-        ]
-        self.rules_table.setHorizontalHeaderLabels(headers)
+                # Update table headers if table exists
+                if hasattr(self, 'rules_table') and self.rules_table is not None:
+                    headers = [
+                        translations[self.current_language].get('rule_name', 'Rule Name'),
+                        translations[self.current_language].get('protocol', 'Protocol'),
+                        translations[self.current_language].get('port', 'Port'),
+                        translations[self.current_language].get('direction', 'Direction'),
+                        translations[self.current_language].get('action', 'Action'),
+                        translations[self.current_language].get('description', 'Description'),
+                        translations[self.current_language].get('enabled', 'Enabled')
+                    ]
+                    self.rules_table.setHorizontalHeaderLabels(headers)
 
-        # Update buttons and other controls
-        self.update_ui_texts()
+                # Update other UI elements
+                if hasattr(self, 'update_ui_texts'):
+                    self.update_ui_texts()
+                    
+            return True
+            
+        except Exception as e:
+            self.logger.log_error(f"Failed to change language to {language}: {str(e)}")
+            return False
 
     def update_ui_texts(self):
         """Update UI text elements"""
@@ -1108,14 +1118,30 @@ class FirewallManager:
                 self.logger.log_error(f"Invalid language code: {language}")
                 return False
                 
-            # Update the current language
-            self.current_language = language
+            # Get the current settings
+            settings = self.get_settings()
             
-            # Update the language in the config
-            success = self.config.update_settings({'language': language})
+            # Update the language in settings
+            settings['language'] = language
+            
+            # Update the settings in the config
+            if hasattr(self, '_config') and hasattr(self._config, 'update_settings'):
+                success = self._config.update_settings(settings)
+            else:
+                # Fallback to direct config update if _config is not available
+                if not hasattr(self, 'config'):
+                    self.config = {}
+                if 'settings' not in self.config:
+                    self.config['settings'] = {}
+                self.config['settings'].update(settings)
+                success = True
+                
             if not success:
                 self.logger.log_error(f"Failed to update language setting: {language}")
                 return False
+                
+            # Update current language
+            self.current_language = language
                 
             # Log the language change
             self.logger.log_firewall_event(
@@ -1123,8 +1149,11 @@ class FirewallManager:
                 f"Changed language to {language}"
             )
             return True
+            
         except Exception as e:
             self.logger.log_error(f"Error changing language: {e}")
+            import traceback
+            self.logger.log_error(f"Traceback: {traceback.format_exc()}")
             return False
     
     def get_rules(self):
