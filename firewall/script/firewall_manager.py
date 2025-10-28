@@ -6,12 +6,14 @@ import json
 import sys
 import uuid
 import platform
-from typing import Dict, List, Optional, Any, Union
+from datetime import datetime
+from typing import Dict, List, Optional, Any, Union, Tuple
 from PySide6.QtWidgets import (
-    QDialog, QFormLayout, QWidget, QLineEdit, 
-    QComboBox, QCheckBox, QDialogButtonBox, QFileDialog, QMessageBox
+    QDialog, QFormLayout, QWidget, QLineEdit, QTextEdit,
+    QComboBox, QCheckBox, QDialogButtonBox, QFileDialog, QMessageBox,
+    QVBoxLayout, QLabel, QSpinBox, QGroupBox, QHBoxLayout
 )
-from PySide6.QtCore import Qt, QCoreApplication
+from PySide6.QtCore import Qt, QCoreApplication, QSize
 from firewall.script.logger import get_logger
 
 # Import nftables manager
@@ -862,14 +864,35 @@ class FirewallManager:
         # Set current language from config or default to 'en'
         self.current_language = self._config.current_language
         
-        # Initialize rules cache
+        # Initialize rules cache and load rules
         self._rules = []
+        self._load_rules()
         
         # Initialize nftables manager
         self.nft = None
         self._init_nftables()
         
         self.logger.log_firewall_event("MANAGER_INIT", "Firewall manager initialized")
+    
+    def _load_rules(self):
+        """Load rules from the configuration"""
+        try:
+            rules = self._config.get('rules', [])
+            if rules:
+                self._rules = rules
+                self.logger.info(f"Loaded {len(rules)} rules from configuration")
+        except Exception as e:
+            self.logger.error(f"Error loading rules: {str(e)}")
+    
+    def _save_rules(self):
+        """Save rules to the configuration"""
+        try:
+            self._config.set('rules', self._rules)
+            self._config.save()
+            return True
+        except Exception as e:
+            self.logger.error(f"Error saving rules: {str(e)}")
+            return False
     
     def _init_nftables(self):
         """Initialize the nftables manager."""
@@ -887,6 +910,105 @@ class FirewallManager:
             return False
         except Exception as e:
             self.logger.log_error(f"Unexpected error initializing nftables: {e}")
+            return False
+            
+    def export_rules(self, file_path: str) -> bool:
+        """
+        Export the current firewall rules to a JSON file.
+        
+        Args:
+            file_path: Path to save the exported rules
+            
+        Returns:
+            bool: True if export was successful, False otherwise
+        """
+        try:
+            rules = self.get_rules()
+            with open(file_path, 'w') as f:
+                json.dump({
+                    'version': '1.0',
+                    'export_date': datetime.now().isoformat(),
+                    'rules': rules
+                }, f, indent=2, ensure_ascii=False)
+            self.logger.info(f"Exported {len(rules)} rules to {file_path}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error exporting rules: {str(e)}")
+            return False
+    
+    def import_rules(self, file_path: str, merge: bool = False) -> bool:
+        """
+        Import firewall rules from a JSON file.
+        
+        Args:
+            file_path: Path to the file containing rules to import
+            merge: If True, merge with existing rules. If False, replace all rules.
+            
+        Returns:
+            bool: True if import was successful, False otherwise
+        """
+        try:
+            with open(file_path, 'r') as f:
+                data = json.load(f)
+                
+            if not isinstance(data, dict) or 'rules' not in data:
+                self.logger.error("Invalid rules file format")
+                return False
+                
+            rules = data['rules']
+            if not isinstance(rules, list):
+                self.logger.error("Rules data is not a list")
+                return False
+                
+            if not merge:
+                # Clear existing rules
+                self._rules = []
+                
+            # Add new rules
+            success_count = 0
+            for rule in rules:
+                if 'id' not in rule:
+                    rule['id'] = str(uuid.uuid4())
+                    
+                # Add timestamps
+                now = datetime.now().isoformat()
+                rule['created_at'] = rule.get('created_at', now)
+                rule['updated_at'] = now
+                
+                # Set default values for new fields if not present
+                rule.setdefault('enabled', True)
+                rule.setdefault('source_port', '')
+                rule.setdefault('ip_version', 'any')
+                rule.setdefault('state', '')
+                rule.setdefault('logging', False)
+                rule.setdefault('log_level', 'info')
+                rule.setdefault('log_prefix', '')
+                
+                # Add to the rules list
+                self._rules.append(rule)
+                
+                # Save to config if not skipping
+                if not merge:
+                    self._save_rules()
+                
+                # Apply the rule to the firewall if enabled
+                if self.nft and rule.get('enabled', True):
+                    nft_rule = self._convert_rule_to_nftables(rule)
+                    if nft_rule:  # Only add if conversion was successful
+                        self.nft.add_rule(nft_rule)
+                
+                self.logger.info(f"Added rule: {rule.get('name', 'Unnamed')} (ID: {rule['id']})")
+                success_count += 1
+                
+            # Save all rules
+            if merge:
+                self._save_rules()
+            
+            self.logger.info(f"Imported {success_count}/{len(rules)} rules from {file_path}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error importing rules: {str(e)}")
             return False
     
     def _show_error(self, title: str, message: str):
@@ -950,7 +1072,7 @@ class FirewallManager:
             self.logger.log_error(f"Error toggling firewall: {e}")
             return False
     
-    def _convert_rule_to_nftables(self, rule: Dict[str, Any]) -> Dict[str, Any]:
+    def _convert_rule_to_nftables(self, rule: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         Convert an internal rule format to nftables format.
         
@@ -958,42 +1080,123 @@ class FirewallManager:
             rule: The rule to convert
             
         Returns:
-            dict: The rule in nftables format
+            dict: The rule in nftables format, or None if conversion fails
         """
-        # This is a basic conversion - you'll need to adapt this to your actual rule format
-        nft_rule = {
-            'table': 'filter',  # Default table
-            'chain': 'INPUT',   # Default chain
-            'handle': rule.get('id'),
-            'comment': rule.get('description', ''),
-            'expr': []
-        }
-        
-        # Map protocol
-        if 'protocol' in rule:
-            nft_rule['expr'].append({
-                'match': {
-                    'op': '==',
-                    'left': {'protocol': rule['protocol']},
-                    'right': rule['protocol']
+        try:
+            action = rule.get('action')
+            if action == 'allow':
+                nft_action = 'accept'
+            elif action == 'block':
+                nft_action = 'drop'
+            elif action == 'reject':
+                nft_action = 'reject with icmp type host-prohibited'
+            else:
+                self.logger.warning(f"Unknown action: {action}")
+                return None
+                
+            # Determine IP version
+            ip_version = rule.get('ip_version', 'any')
+            if ip_version == 'ip6':
+                family = 'ip6'
+            elif ip_version == 'ip':
+                family = 'ip'
+            else:  # 'any' or unspecified
+                family = 'ip'  # Default to IPv4 for now
+                
+            # Determine chain based on direction
+            direction = rule.get('direction', 'in')
+            if direction == 'in':
+                chain = 'INPUT'
+                iface_key = 'iifname'
+            elif direction == 'out':
+                chain = 'OUTPUT'
+                iface_key = 'oifname'
+            else:  # 'both'
+                # For 'both', we'll create two separate rules
+                rule1 = rule.copy()
+                rule1['direction'] = 'in'
+                rule2 = rule.copy()
+                rule2['direction'] = 'out'
+                
+                # Return a list of both rules
+                return [
+                    self._convert_rule_to_nftables(rule1),
+                    self._convert_rule_to_nftables(rule2)
+                ]
+            
+            nft_rule = {
+                'action': nft_action,
+                'family': family,
+                'table': 'filter',
+                'chain': chain,
+            }
+            
+            # Add protocol match
+            protocol = rule.get('protocol')
+            if protocol and protocol != 'all':
+                nft_rule['meta'] = {'l4proto': protocol}
+            
+            # Add port match (destination port)
+            port = str(rule.get('port', '')).strip()
+            if port:
+                if '-' in port:
+                    # Port range
+                    start_port, end_port = port.split('-', 1)
+                    nft_rule['dport'] = {'>=': int(start_port), '<=': int(end_port)}
+                elif ',' in port:
+                    # Multiple ports
+                    nft_rule['dport'] = [int(p.strip()) for p in port.split(',') if p.strip().isdigit()]
+                elif port.isdigit():
+                    # Single port
+                    nft_rule['dport'] = int(port)
+            
+            # Add source port match
+            source_port = str(rule.get('source_port', '')).strip()
+            if source_port:
+                if '-' in source_port:
+                    # Port range
+                    start_port, end_port = source_port.split('-', 1)
+                    nft_rule['sport'] = {'>=': int(start_port), '<=': int(end_port)}
+                elif ',' in source_port:
+                    # Multiple ports
+                    nft_rule['sport'] = [int(p.strip()) for p in source_port.split(',') if p.strip().isdigit()]
+                elif source_port.isdigit():
+                    # Single port
+                    nft_rule['sport'] = int(source_port)
+            
+            # Add source IP match
+            source_ip = rule.get('source_ip', '').strip()
+            if source_ip and source_ip.lower() not in ('', 'any'):
+                nft_rule['saddr'] = source_ip
+                
+            # Add destination IP match
+            dest_ip = rule.get('destination_ip', '').strip()
+            if dest_ip and dest_ip.lower() not in ('', 'any'):
+                nft_rule['daddr'] = dest_ip
+                
+            # Add interface match
+            interface = rule.get('interface', '').strip()
+            if interface:
+                nft_rule[iface_key] = interface
+            
+            # Add connection state match
+            state = rule.get('state', '').strip()
+            if state:
+                nft_rule['ct'] = {'state': state}
+            
+            # Add logging if enabled
+            if rule.get('logging'):
+                log_prefix = rule.get('log_prefix', 'RULE')
+                nft_rule['log'] = {
+                    'prefix': f"{log_prefix} {rule.get('name', 'Unnamed')}",
+                    'level': rule.get('log_level', 'info')
                 }
-            })
-        
-        # Map ports
-        if 'dport' in rule:
-            nft_rule['expr'].append({
-                'match': {
-                    'op': '==',
-                    'left': {'dport': rule['dport']},
-                    'right': rule['dport']
-                }
-            })
-        
-        # Map action (accept, drop, reject)
-        action = rule.get('action', 'accept').lower()
-        nft_rule['expr'].append({'verdict': action.upper()})
-        
-        return nft_rule
+            
+            return nft_rule
+            
+        except Exception as e:
+            self.logger.error(f"Error converting rule to nftables format: {str(e)}")
+            return None
     
     def _create_default_nftables_config(self) -> Dict:
         """Create a default nftables configuration."""
@@ -1185,12 +1388,13 @@ class FirewallManager:
             self.logger.log_error(f"Traceback: {traceback.format_exc()}")
             return []
     
-    def add_rule(self, rule):
+    def add_rule(self, rule, skip_save=False):
         """
         Add a new firewall rule
         
         Args:
             rule (dict): The rule to add
+            skip_save (bool): If True, don't save the rules to disk (used during import)
             
         Returns:
             bool: True if the rule was added successfully, False otherwise

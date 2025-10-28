@@ -328,12 +328,90 @@ class WindowsFirewallManager(QMainWindow):
         
         # Set up the main window
         self.setup_toolbar()
-        self.setup_statusbar()
+        
+        # Create the main widget and UI elements first
         self.setup_main_widget()
+        
+        # Now set up the status bar after the main widget
+        self.setup_statusbar()
+        
+        # Finally, connect all signals after UI is fully initialized
+        self.setup_connections()
         
         # Load initial data
         self.load_initial_data()
         
+        # Show the window
+        self.show()
+        
+    def setup_main_widget(self):
+        """Set up the main widget and its components"""
+        # Create central widget and layout
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
+        self.main_layout = QVBoxLayout(self.central_widget)
+        
+        # Create menu bar
+        self.menu_manager = MenuManager(self, self.current_language)
+        self.menu_bar = self.menuBar()
+        self.menu_manager.create_menu_bar()
+        
+        # Create tab widget
+        self.tab_widget = QTabWidget()
+        
+        # Create tabs
+        self.status_tab = self.create_status_tab()
+        self.rules_tab = self.create_rules_tab()
+        self.logs_tab = self.create_logs_tab()
+        self.qr_tab = self.create_qr_tab()
+        self.config_tab = self.create_config_tab()
+        
+        # Add tabs to the tab widget
+        self.tab_widget.addTab(self.status_tab, translations[self.current_language].get('tab_status', 'Status'))
+        self.tab_widget.addTab(self.rules_tab, translations[self.current_language].get('tab_rules', 'Rules'))
+        self.tab_widget.addTab(self.logs_tab, translations[self.current_language].get('tab_logs', 'Logs'))
+        self.tab_widget.addTab(self.qr_tab, translations[self.current_language].get('tab_qr', 'QR Code'))
+        self.tab_widget.addTab(self.config_tab, translations[self.current_language].get('tab_config', 'Configuration'))
+        
+        # Add tab widget to main layout
+        self.main_layout.addWidget(self.tab_widget)
+        
+        # Apply any additional styling
+        self.tab_widget.setStyleSheet("""
+            QTabBar::tab {
+                padding: 8px 16px;
+                margin-right: 2px;
+                background: #2d2d2d;
+                color: #cccccc;
+                border: 1px solid #3d3d3d;
+                border-bottom: none;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+            }
+            QTabBar::tab:selected {
+                background: #3d3d3d;
+                color: #ffffff;
+            }
+            QTabBar::tab:hover:!selected {
+                background: #353535;
+            }
+        """)
+    
+    def setup_window_icon(self):
+        """Set up the application window icon"""
+        try:
+            # Try to load the application icon if it exists
+            icon_path = os.path.join(os.path.dirname(__file__), '..', 'assets', 'icon.ico')
+            if os.path.exists(icon_path):
+                self.setWindowIcon(QIcon(icon_path))
+            else:
+                # Fallback to system default icon
+                self.setWindowIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+        except Exception as e:
+            self.logger.error(f"Error setting window icon: {e}")
+            # If anything goes wrong, just use the default icon
+            self.setWindowIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+
     def setup_toolbar(self):
         """Set up the main toolbar with common actions"""
         # Create toolbar
@@ -358,222 +436,11 @@ class WindowsFirewallManager(QMainWindow):
     def setup_statusbar(self):
         """Set up the status bar with status label and progress bar"""
         # Create status bar
-        status_bar = self.statusBar()
+        self.status_bar = self.statusBar()
         
         # Create status label
         self.status_label = QLabel(translations[self.current_language].get('status_ready', 'Ready'))
-        status_bar.addPermanentWidget(self.status_label, 1)
-        
-        # Create progress bar
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setMaximumWidth(200)
-        self.progress_bar.setMinimum(0)
-        self.progress_bar.setMaximum(100)
-        self.progress_bar.hide()  # Hide by default, show when needed
-        status_bar.addPermanentWidget(self.progress_bar)
-        
-        # Show initial status message
-        status_bar.showMessage(translations[self.current_language].get('welcome_message', 'Application started'))
-        
-    def setup_main_widget(self):
-        """Set up the main widget with tabs for different functionality"""
-        # Create a central widget and set the main layout
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        
-        # Create main layout
-        main_layout = QVBoxLayout(central_widget)
-        
-        # Create tab widget
-        self.tab_widget = QTabWidget()
-        
-        # Add tabs
-        self.tab_widget.addTab(self.create_status_tab(), 
-                             translations[self.current_language].get('tab_status', 'Status'))
-        self.tab_widget.addTab(self.create_rules_tab(), 
-                             translations[self.current_language].get('tab_rules', 'Rules'))
-        self.tab_widget.addTab(self.create_logs_tab(), 
-                             translations[self.current_language].get('tab_logs', 'Logs'))
-        self.tab_widget.addTab(self.create_config_tab(),
-                             translations[self.current_language].get('tab_settings', 'Settings'))
-        
-        # Add tab widget to main layout
-        main_layout.addWidget(self.tab_widget)
-        
-    def create_status_tab(self):
-        """Create the status tab"""
-        # Create status tab widget
-        status_tab = QWidget()
-        layout = QVBoxLayout(status_tab)
-        
-        # Add status information
-        self.status_info = QLabel(translations[self.current_language].get('loading_status', 'Loading status...'))
-        layout.addWidget(self.status_info)
-        
-        # Add refresh button
-        refresh_btn = QPushButton(translations[self.current_language].get('refresh', 'Refresh'))
-        refresh_btn.clicked.connect(self.update_status)
-        layout.addWidget(refresh_btn)
-        
-        # Add stretch to push content to the top
-        layout.addStretch()
-        
-        return status_tab
-        
-    def create_rules_tab(self):
-        """Create the rules management tab"""
-        rules_tab = QWidget()
-        layout = QVBoxLayout(rules_tab)
-        
-        # Add rules table or list
-        self.rules_table = QTableWidget()
-        self.rules_table.setColumnCount(4)
-        self.rules_table.setHorizontalHeaderLabels([
-            translations[self.current_language].get('rule_name', 'Name'),
-            translations[self.current_language].get('rule_direction', 'Direction'),
-            translations[self.current_language].get('rule_protocol', 'Protocol'),
-            translations[self.current_language].get('rule_action', 'Action')
-        ])
-        layout.addWidget(self.rules_table)
-        
-        # Add buttons for rule management
-        btn_layout = QHBoxLayout()
-        
-        add_btn = QPushButton(translations[self.current_language].get('add_rule', 'Add Rule'))
-        edit_btn = QPushButton(translations[self.current_language].get('edit_rule', 'Edit'))
-        delete_btn = QPushButton(translations[self.current_language].get('delete_rule', 'Delete'))
-        
-        btn_layout.addWidget(add_btn)
-        btn_layout.addWidget(edit_btn)
-        btn_layout.addWidget(delete_btn)
-        
-        layout.addLayout(btn_layout)
-        
-        return rules_tab
-        
-    def create_logs_tab(self):
-        """Create the logs tab"""
-        logs_tab = QWidget()
-        layout = QVBoxLayout(logs_tab)
-        
-        # Add logs text area
-        self.logs_text = QTextEdit()
-        self.logs_text.setReadOnly(True)
-        layout.addWidget(self.logs_text)
-        
-        # Add buttons for log management
-        btn_layout = QHBoxLayout()
-        
-        refresh_btn = QPushButton(translations[self.current_language].get('refresh', 'Refresh'))
-        clear_btn = QPushButton(translations[self.current_language].get('clear_logs', 'Clear'))
-        save_btn = QPushButton(translations[self.current_language].get('save_logs', 'Save'))
-        
-        refresh_btn.clicked.connect(self.refresh_logs)
-        clear_btn.clicked.connect(self.clear_logs)
-        save_btn.clicked.connect(self.save_logs)
-        
-        btn_layout.addWidget(refresh_btn)
-        btn_layout.addWidget(clear_btn)
-        btn_layout.addWidget(save_btn)
-        
-        layout.addLayout(btn_layout)
-        
-        return logs_tab
-        
-    def update_status(self):
-        """Update the status tab with current information"""
-        # This will be implemented to update the status tab
-        self.status_info.setText(translations[self.current_language].get('status_updated', 'Status updated'))
-        
-    def refresh_logs(self):
-        """Refresh the logs display"""
-        # This will be implemented to refresh logs
-        self.logs_text.append(translations[self.current_language].get('logs_refreshed', 'Logs refreshed at ') + 
-                             str(datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-        
-    def clear_logs(self):
-        """Clear the logs display"""
-        self.logs_text.clear()
-        
-    def save_logs(self):
-        """Save logs to a file"""
-        file_path, _ = QFileDialog.getSaveFileName(
-            self,
-            translations[self.current_language].get('save_logs', 'Save Logs'),
-            '',
-            'Text Files (*.txt);;All Files (*)'
-        )
-        
-        if file_path:
-            try:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(self.logs_text.toPlainText())
-                self.statusBar().showMessage(
-                    translations[self.current_language].get('logs_saved', 'Logs saved successfully'))
-            except Exception as e:
-                QMessageBox.critical(
-                    self,
-                    translations[self.current_language].get('error', 'Error'),
-                    f"{translations[self.current_language].get('save_error', 'Failed to save logs:')} {str(e)}"
-                )
-    
-    def setup_window_icon(self):
-        """Set up the application window icon"""
-        try:
-            # Get the absolute path to the icon file
-            script_dir = os.path.dirname(os.path.abspath(__file__))
-            icon_path = os.path.abspath(os.path.join(script_dir, '..', 'assets', 'icon.png'))
-            
-            if os.path.exists(icon_path):
-                # Set window icon
-                self.setWindowIcon(QIcon(icon_path))
-                
-                # Also set the application icon (for taskbar/desktop)
-                app_icon = QIcon(icon_path)
-                QApplication.setWindowIcon(app_icon)
-                
-                self.logger.log_firewall_event("ICON_LOADED", f"Loaded application icon from {icon_path}")
-            else:
-                self.logger.log_warning(f"Icon file not found at {icon_path}")
-        except Exception as e:
-            error_msg = f"Error loading window icon: {str(e)}"
-            self.logger.log_error(error_msg)
-            print(error_msg)  # Also print to console in case logger is not initialized properly
-
-        # Create central widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        main_layout = QVBoxLayout(central_widget)
-        
-        # Create menu bar
-        self.menu_manager = MenuManager(self, self.current_language)
-        self.menu_bar = self.menuBar()
-        self.menu_manager.create_menu_bar()
-        
-        # Create tab widget for different sections
-        self.tab_widget = QTabWidget()
-        main_layout.addWidget(self.tab_widget)
-        
-        # Create status bar
-        self.status_bar = QStatusBar()
-        self.setStatusBar(self.status_bar)
-        self.status_bar.showMessage(translations[self.current_language].get('ready_status', 'Ready'))
-        
-        # Initialize tabs
-        self.create_status_tab()
-        self.create_rules_tab()
-        self.create_logs_tab()
-        self.create_qr_tab()
-        self.create_config_tab()
-        
-        # Connect signals
-        self.setup_connections()
-        
-        # Apply initial settings
-        self.apply_ui_settings()
-        
-        # Show window
-        self.show()
+        self.status_bar.addPermanentWidget(self.status_label, 1)
         
     def load_initial_data(self):
         """Load initial data for the UI"""
@@ -623,6 +490,108 @@ class WindowsFirewallManager(QMainWindow):
                 f"Error adding rule: {str(e)}"
             )
 
+    def delete_rule(self):
+        """Delete the selected firewall rule"""
+        try:
+            # Get the selected row
+            selected_rows = self.rules_table.selectionModel().selectedRows()
+            if not selected_rows:
+                QMessageBox.warning(
+                    self,
+                    translations[self.current_language].get('warning', 'Warning'),
+                    translations[self.current_language].get('select_rule_to_delete', 'Please select a rule to delete')
+                )
+                return
+
+            row = selected_rows[0].row()
+            
+            # Get the rule data
+            rule = {
+                'name': self.rules_table.item(row, 0).text(),
+                'protocol': self.rules_table.item(row, 1).text(),
+                'port': self.rules_table.item(row, 2).text(),
+                'direction': self.rules_table.item(row, 3).text(),
+                'action': self.rules_table.item(row, 4).text(),
+                'enabled': self.rules_table.item(row, 5).checkState() == Qt.Checked
+            }
+            
+            # Confirm deletion
+            confirm = QMessageBox.question(
+                self,
+                translations[self.current_language].get('confirm_delete', 'Confirm Delete'),
+                translations[self.current_language].get('confirm_delete_rule', 'Are you sure you want to delete this rule?'),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            
+            if confirm == QMessageBox.StandardButton.Yes:
+                if self.firewall.delete_rule(rule):
+                    # Refresh the rules table
+                    self.load_rules()
+                    self.logger.log_firewall_event("RULE_DELETED", f"Deleted rule: {rule.get('name', 'Unnamed')}")
+                else:
+                    QMessageBox.warning(
+                        self,
+                        translations[self.current_language].get('error', 'Error'),
+                        translations[self.current_language].get('delete_rule_failed', 'Failed to delete rule')
+                    )
+        except Exception as e:
+            self.logger.log_error(f"Error in delete_rule: {e}")
+            QMessageBox.critical(
+                self,
+                translations[self.current_language].get('error', 'Error'),
+                f"Error deleting rule: {str(e)}"
+            )
+
+    def edit_rule(self):
+        """Edit the selected firewall rule"""
+        try:
+            # Get the selected row
+            selected_rows = self.rules_table.selectionModel().selectedRows()
+            if not selected_rows:
+                QMessageBox.warning(
+                    self,
+                    translations[self.current_language].get('warning', 'Warning'),
+                    translations[self.current_language].get('select_rule_to_edit', 'Please select a rule to edit')
+                )
+                return
+
+            row = selected_rows[0].row()
+            
+            # Get the current rule data
+            rule = {
+                'name': self.rules_table.item(row, 0).text(),
+                'protocol': self.rules_table.item(row, 1).text(),
+                'port': self.rules_table.item(row, 2).text(),
+                'direction': self.rules_table.item(row, 3).text(),
+                'action': self.rules_table.item(row, 4).text(),
+                'enabled': self.rules_table.item(row, 5).checkState() == Qt.Checked
+            }
+            
+            # Open the edit dialog with the current rule data
+            dialog = RuleDialog(self, translations[self.current_language], rule)
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                # Get the updated rule data
+                updated_rule = dialog.get_rule()
+                if updated_rule:
+                    # Update the rule using the firewall manager
+                    if self.firewall.delete_rule(rule) and self.firewall.add_rule(updated_rule):
+                        # Refresh the rules table
+                        self.load_rules()
+                        self.logger.log_firewall_event("RULE_UPDATED", f"Updated rule: {updated_rule.get('name', 'Unnamed')}")
+                    else:
+                        QMessageBox.warning(
+                            self,
+                            translations[self.current_language].get('error', 'Error'),
+                            translations[self.current_language].get('update_rule_failed', 'Failed to update rule')
+                        )
+        except Exception as e:
+            self.logger.log_error(f"Error in edit_rule: {e}")
+            QMessageBox.critical(
+                self,
+                translations[self.current_language].get('error', 'Error'),
+                f"Error editing rule: {str(e)}"
+            )
+
     def setup_connections(self):
         """Set up signal/slot connections"""
         # Connect menu actions
@@ -639,9 +608,10 @@ class WindowsFirewallManager(QMainWindow):
         # Connect rule management buttons
         if hasattr(self, 'add_rule_btn'):
             self.add_rule_btn.clicked.connect(self.add_rule_dialog)
-            # Temporarily disable these until implemented
-            self.edit_rule_btn.setEnabled(False)
-            self.delete_rule_btn.setEnabled(False)
+            self.edit_rule_btn.clicked.connect(self.edit_rule)
+            self.delete_rule_btn.clicked.connect(self.delete_rule)
+            
+            # Disable buttons that aren't implemented yet
             self.load_config_btn.setEnabled(False)
             self.save_config_btn.setEnabled(False)
     
@@ -740,38 +710,32 @@ class WindowsFirewallManager(QMainWindow):
                 translations[self.current_language].get('error', 'Error'),
                 f"Failed to toggle firewall: {str(e)}"
             )
-    
-    def load_rules(self):
-        """Load firewall rules into the rules table"""
-        try:
-            if not hasattr(self, 'rules_table'):
-                return
-                
-            # Clear existing rules
-            self.rules_table.setRowCount(0)
             
-            # Get rules from the firewall manager
-            rules = self.firewall.get_rules()
-            self.rules_table.setRowCount(len(rules))
-            
-            for row, rule in enumerate(rules):
-                if not isinstance(rule, dict):
-                    continue
+            # Refresh the rules table in case of error
+            try:
+                rules = self.firewall.get_rules()
+                if hasattr(self, 'rules_table'):
+                    self.rules_table.setRowCount(len(rules))
                     
-                self.rules_table.setItem(row, 0, QTableWidgetItem(rule.get('name', '')))
-                self.rules_table.setItem(row, 1, QTableWidgetItem(rule.get('protocol', '')))
-                self.rules_table.setItem(row, 2, QTableWidgetItem(str(rule.get('port', ''))))
-                self.rules_table.setItem(row, 3, QTableWidgetItem(rule.get('direction', '')))
-                self.rules_table.setItem(row, 4, QTableWidgetItem(rule.get('action', '')))
-                
-                # Add enabled checkbox
-                enabled_item = QTableWidgetItem()
-                enabled_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-                enabled_item.setCheckState(Qt.Checked if rule.get('enabled', False) else Qt.Unchecked)
-                self.rules_table.setItem(row, 5, enabled_item)
+                    for row, rule in enumerate(rules):
+                        if not isinstance(rule, dict):
+                            continue
+                            
+                        self.rules_table.setItem(row, 0, QTableWidgetItem(rule.get('name', '')))
+                        self.rules_table.setItem(row, 1, QTableWidgetItem(rule.get('protocol', '')))
+                        self.rules_table.setItem(row, 2, QTableWidgetItem(str(rule.get('port', ''))))
+                        self.rules_table.setItem(row, 3, QTableWidgetItem(rule.get('direction', '')))
+                        self.rules_table.setItem(row, 4, QTableWidgetItem(rule.get('action', '')))
+            except Exception as refresh_error:
+                self.logger.log_error(f"Error refreshing rules table: {refresh_error}")
                 
         except Exception as e:
-            self.logger.log_error(f"Error loading rules: {e}")
+            self.logger.log_error(f"Error in toggle_firewall: {e}")
+            QMessageBox.critical(
+                self,
+                translations[self.current_language].get('error', 'Error'),
+                f"An error occurred: {str(e)}"
+            )
     
     def refresh_logs(self):
         """Refresh the logs display"""
@@ -782,11 +746,108 @@ class WindowsFirewallManager(QMainWindow):
         except Exception as e:
             self.logger.log_error(f"Error refreshing logs: {e}")
     
+    def load_rules(self):
+        """Load firewall rules into the rules table"""
+        try:
+            if not hasattr(self, 'rules_table'):
+                return
+                
+            self.rules_table.setRowCount(0)
+            rules = self.firewall.get_rules()
+            
+            for row, rule in enumerate(rules):
+                if not isinstance(rule, dict):
+                    continue
+                    
+                self.rules_table.insertRow(row)
+                
+                # Add rule properties to the table
+                self.rules_table.setItem(row, 0, QTableWidgetItem(rule.get('name', '')))
+                self.rules_table.setItem(row, 1, QTableWidgetItem(rule.get('protocol', '')))
+                self.rules_table.setItem(row, 2, QTableWidgetItem(str(rule.get('port', ''))))
+                self.rules_table.setItem(row, 3, QTableWidgetItem(rule.get('direction', '')))
+                self.rules_table.setItem(row, 4, QTableWidgetItem(rule.get('action', '')))
+                
+                # Add enabled checkbox
+                enabled_item = QTableWidgetItem()
+                enabled_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+                enabled_item.setCheckState(Qt.Checked if rule.get('enabled', True) else Qt.Unchecked)
+                self.rules_table.setItem(row, 5, enabled_item)
+                
+            # Resize columns to fit content
+            self.rules_table.resizeColumnsToContents()
+                
+        except Exception as e:
+            self.logger.log_error(f"Error loading rules: {e}")
+            QMessageBox.critical(
+                self,
+                translations[self.current_language].get('error', 'Error'),
+                translations[self.current_language].get('load_rules_failed', 'Failed to load rules') + f": {str(e)}"
+            )
+    
     # Tab creation methods
+    def create_rules_tab(self):
+        """Create the rules management tab"""
+        rules_tab = QWidget()
+        layout = QVBoxLayout(rules_tab)
+        
+        # Create rules table
+        self.rules_table = QTableWidget()
+        self.rules_table.setColumnCount(6)
+        self.rules_table.setHorizontalHeaderLabels([
+            translations[self.current_language].get('name', 'Name'),
+            translations[self.current_language].get('direction', 'Direction'),
+            translations[self.current_language].get('action', 'Action'),
+            translations[self.current_language].get('protocol', 'Protocol'),
+            translations[self.current_language].get('port', 'Port'),
+            translations[self.current_language].get('enabled', 'Enabled')
+        ])
+        self.rules_table.horizontalHeader().setStretchLastSection(True)
+        self.rules_table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.rules_table.setSelectionMode(QTableWidget.SingleSelection)
+        
+        # Create buttons
+        button_layout = QHBoxLayout()
+        
+        self.add_rule_btn = QPushButton(translations[self.current_language].get('add_rule', 'Add Rule'))
+        self.edit_rule_btn = QPushButton(translations[self.current_language].get('edit_rule', 'Edit Rule'))
+        self.delete_rule_btn = QPushButton(translations[self.current_language].get('delete_rule', 'Delete Rule'))
+        
+        # Config management buttons
+        self.import_rules_btn = QPushButton(translations[self.current_language].get('import_rules', 'Import Rules'))
+        self.export_rules_btn = QPushButton(translations[self.current_language].get('export_rules', 'Export Rules'))
+        
+        # Add buttons to layout
+        button_layout.addWidget(self.add_rule_btn)
+        button_layout.addWidget(self.edit_rule_btn)
+        button_layout.addWidget(self.delete_rule_btn)
+        button_layout.addStretch()
+        button_layout.addWidget(self.import_rules_btn)
+        button_layout.addWidget(self.export_rules_btn)
+        
+        # Connect buttons
+        self.add_rule_btn.clicked.connect(self.add_rule_dialog)
+        self.edit_rule_btn.clicked.connect(self.edit_rule)
+        self.delete_rule_btn.clicked.connect(self.delete_rule)
+        self.import_rules_btn.clicked.connect(self.import_rules)
+        self.export_rules_btn.clicked.connect(self.export_rules)
+        
+        # Add widgets to layout
+        layout.addWidget(self.rules_table)
+        layout.addLayout(button_layout)
+        
+        # Initial load of rules
+        self.load_rules()
+        
+        return rules_tab
+        
     def create_status_tab(self):
         """Create the status tab"""
         status_tab = QWidget()
         layout = QVBoxLayout(status_tab)
+        
+        # Create button layout
+        button_layout = QHBoxLayout()
         
         # Status group
         status_group = QGroupBox(translations[self.current_language].get('status', 'Status'))
@@ -822,33 +883,6 @@ class WindowsFirewallManager(QMainWindow):
         status_layout.addWidget(self.toggle_button)
         status_group.setLayout(status_layout)
         
-        layout.addWidget(status_group)
-        layout.addStretch()
-        
-        self.tab_widget.addTab(status_tab, translations[self.current_language].get('tab_status', 'Status'))
-    
-    def create_rules_tab(self):
-        """Create the rules management tab"""
-        rules_tab = QWidget()
-        layout = QVBoxLayout(rules_tab)
-        
-        # Rules table
-        self.rules_table = QTableWidget()
-        self.rules_table.setColumnCount(6)
-        self.rules_table.setHorizontalHeaderLabels([
-            translations[self.current_language].get('name', 'Name'),
-            translations[self.current_language].get('protocol', 'Protocol'),
-            translations[self.current_language].get('port', 'Port'),
-            translations[self.current_language].get('direction', 'Direction'),
-            translations[self.current_language].get('action', 'Action'),
-            translations[self.current_language].get('enabled', 'Enabled')
-        ])
-        self.rules_table.horizontalHeader().setStretchLastSection(True)
-        
-        # Buttons
-        button_layout = QHBoxLayout()
-        
-        # Rule management buttons
         self.add_rule_btn = QPushButton(translations[self.current_language].get('add_rule', 'Add Rule'))
         self.edit_rule_btn = QPushButton(translations[self.current_language].get('edit_rule', 'Edit Rule'))
         self.delete_rule_btn = QPushButton(translations[self.current_language].get('delete_rule', 'Delete Rule'))
@@ -857,18 +891,45 @@ class WindowsFirewallManager(QMainWindow):
         self.load_config_btn = QPushButton(translations[self.current_language].get('load_config', 'Load Config'))
         self.save_config_btn = QPushButton(translations[self.current_language].get('save_config', 'Save Config'))
         
-        # Add buttons to layout
-        button_layout.addWidget(self.add_rule_btn)
-        button_layout.addWidget(self.edit_rule_btn)
-        button_layout.addWidget(self.delete_rule_btn)
-        button_layout.addStretch()
-        button_layout.addWidget(self.load_config_btn)
-        button_layout.addWidget(self.save_config_btn)
+        # Add status information
+        status_group = QGroupBox(translations[self.current_language].get('firewall_status', 'Firewall Status'))
+        status_layout = QVBoxLayout()
+        
+        self.status_label = QLabel(translations[self.current_language].get('status_off', 'Status: Off'))
+        self.toggle_button = QPushButton(translations[self.current_language].get('enable_firewall', 'Enable Firewall'))
+        self.toggle_button.setStyleSheet("""
+            QPushButton {
+                background-color: #1e88e5;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1976d2;
+            }
+            QPushButton:pressed {
+                background-color: #1565c0;
+            }
+        """)
+        
+        status_layout.addWidget(self.status_label)
+        status_layout.addWidget(self.toggle_button)
+        status_group.setLayout(status_layout)
+        
+        # Add status group to main layout
+        layout.addWidget(status_group)
+        
+        # Add stretch to push content to the top
+        layout.addStretch()
+        
+        return status_tab
         
         layout.addWidget(self.rules_table)
         layout.addLayout(button_layout)
         
-        self.tab_widget.addTab(rules_tab, translations[self.current_language].get('tab_rules', 'Rules'))
+        return rules_tab
     
     def create_logs_tab(self):
         """Create the logs tab"""
@@ -899,39 +960,72 @@ class WindowsFirewallManager(QMainWindow):
         layout.addWidget(self.logs_text)
         layout.addLayout(button_layout)
         
-        self.tab_widget.addTab(logs_tab, translations[self.current_language].get('tab_logs', 'Logs'))
+        return logs_tab
     
     def create_qr_tab(self):
         """Create the QR code generation tab"""
         qr_tab = QWidget()
         layout = QVBoxLayout(qr_tab)
         
-        # Input
-        input_layout = QHBoxLayout()
+        # Add a label to indicate what this tab is for
+        info_label = QLabel(translations[self.current_language].get('qr_tab_info', 'Generate QR codes for sharing firewall rules'))
+        info_label.setWordWrap(True)
+        layout.addWidget(info_label)
         
-        self.qr_input = QLineEdit()
-        self.qr_input.setPlaceholderText(
-            translations[self.current_language].get('qr_placeholder', 'Enter text to generate QR code')
-        )
+        # Add input field for text to encode in QR code
+        self.qr_input = QTextEdit()
+        self.qr_input.setPlaceholderText(translations[self.current_language].get('qr_input_placeholder', 'Enter text to generate QR code...'))
+        layout.addWidget(QLabel(translations[self.current_language].get('input_text', 'Input Text:')))
+        layout.addWidget(self.qr_input)
         
-        self.generate_qr_btn = QPushButton(
-            translations[self.current_language].get('generate_qr', 'Generate QR')
-        )
-        self.generate_qr_btn.clicked.connect(self.generate_qr_code)
+        # Add generate button
+        generate_btn = QPushButton(translations[self.current_language].get('generate_qr', 'Generate QR Code'))
+        generate_btn.clicked.connect(self.generate_qr_code)
+        layout.addWidget(generate_btn)
         
-        input_layout.addWidget(self.qr_input)
-        input_layout.addWidget(self.generate_qr_btn)
-        
-        # QR code display
+        # Add label to display the QR code
         self.qr_label = QLabel()
-        self.qr_label.setAlignment(Qt.AlignCenter)
-        self.qr_label.setMinimumSize(300, 300)
-        self.qr_label.setStyleSheet("background-color: white; border: 1px solid #ccc;")
+        self.qr_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.qr_label)
         
-        layout.addLayout(input_layout)
-        layout.addWidget(self.qr_label, 1, Qt.AlignCenter)
+        # Add stretch to push content to the top
+        layout.addStretch()
         
-        self.tab_widget.addTab(qr_tab, translations[self.current_language].get('tab_qr', 'QR Code'))
+        # Apply dark theme styling
+        qr_tab.setStyleSheet("""
+            QWidget {
+                background-color: #2d2d2d;
+                color: #f0f0f0;
+            }
+            QTextEdit {
+                background-color: #3d3d3d;
+                color: #f0f0f0;
+                border: 1px solid #4d4d4d;
+                border-radius: 4px;
+                padding: 5px;
+            }
+            QPushButton {
+                background-color: #1e88e5;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1976d2;
+            }
+            QPushButton:pressed {
+                background-color: #1565c0;
+            }
+            QLabel {
+                color: #f0f0f0;
+            }
+        """)
+        
+        return qr_tab
+
+# ... (rest of the code remains the same)
     
     def create_config_tab(self):
         """Create the configuration tab"""
@@ -981,7 +1075,7 @@ class WindowsFirewallManager(QMainWindow):
         layout.addStretch()
         layout.addLayout(button_layout)
         
-        self.tab_widget.addTab(config_tab, translations[self.current_language].get('tab_config', 'Configuration'))
+        return config_tab
     
     # Action handlers
     def on_language_changed(self, index):
@@ -1028,8 +1122,8 @@ class WindowsFirewallManager(QMainWindow):
         self.help_window.raise_()
     
     def generate_qr_code(self):
-        """Generate a QR code from the input text"""
-        text = self.qr_input.text().strip()
+        """Generate a QR code from the input text using Wand"""
+        text = self.qr_input.toPlainText().strip()
         if not text:
             QMessageBox.warning(
                 self,
@@ -1039,7 +1133,7 @@ class WindowsFirewallManager(QMainWindow):
             return
         
         try:
-            # Generate QR code
+            # Generate QR code using qrcode
             qr = qrcode.QRCode(
                 version=1,
                 error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -1049,54 +1143,87 @@ class WindowsFirewallManager(QMainWindow):
             qr.add_data(text)
             qr.make(fit=True)
             
-            # Create and save QR code image
-            img = qr.make_image(fill_color="black", back_color="white")
-            
-            # Convert to QPixmap and display
-            temp_file = tempfile.NamedTemporaryFile(suffix='.png', delete=False)
-            img.save(temp_file.name)
-            
-            pixmap = QPixmap(temp_file.name)
-            self.qr_label.setPixmap(pixmap.scaled(
-                300, 300, 
-                Qt.KeepAspectRatio, 
-                Qt.SmoothTransformation
-            ))
+            # Create a temporary file to store the QR code
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
+                # Generate QR code as a PIL image
+                img = qr.make_image(fill_color="black", back_color="white")
+                img.save(temp_file.name)
+                
+                # Use Wand to read the image
+                with wand.image.Image(filename=temp_file.name) as img_wand:
+                    # Convert to QPixmap and display
+                    img_wand.format = 'png'
+                    img_wand.background_color = wand.color.Color('#2d2d2d')
+                    img_wand.alpha_channel = 'remove'
+                    
+                    # Save to a temporary file
+                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as final_file:
+                        img_wand.save(filename=final_file.name)
+                        pixmap = QPixmap(final_file.name)
+                        self.qr_label.setPixmap(pixmap)
+                        
+                        # Clean up
+                        try:
+                            os.unlink(final_file.name)
+                        except:
+                            pass
             
             # Clean up
-            temp_file.close()
-            os.unlink(temp_file.name)
+            try:
+                os.unlink(temp_file.name)
+            except:
+                pass
             
         except Exception as e:
-            self.logger.log_error(f"Error generating QR code: {e}")
+            self.logger.error(f"Error generating QR code: {e}")
             QMessageBox.critical(
                 self,
                 translations[self.current_language].get('error', 'Error'),
-                f"Failed to generate QR code: {str(e)}"
+                translations[self.current_language].get('qr_generation_error', 'Error generating QR code')
             )
     
-    def save_config(self):
-        """Save configuration"""
+    def import_rules(self):
+        """Import firewall rules from a JSON file"""
         try:
-            # Save language setting
-            language = self.language_combo.currentData()
-            if language != self.current_language:
-                self.change_language(language)
-            
-            # Add more settings to save as needed
-            
-            QMessageBox.information(
+            # Show file dialog to select import file
+            file_path, _ = QFileDialog.getOpenFileName(
                 self,
-                translations[self.current_language].get('success', 'Success'),
-                translations[self.current_language].get('config_saved', 'Configuration saved successfully')
+                translations[self.current_language].get('import_rules', 'Import Rules'),
+                "",  # Start in current directory
+                "JSON Files (*.json);;All Files (*)"
             )
             
+            if file_path:
+                # Read the file
+                with open(file_path, 'r') as f:
+                    rules = json.load(f)
+                
+                # Validate rules format
+                if not isinstance(rules, list):
+                    raise ValueError("Invalid rules format: expected a list of rules")
+                
+                # Add each rule
+                success_count = 0
+                for rule in rules:
+                    if self.firewall.add_rule(rule):
+                        success_count += 1
+                
+                # Refresh the rules table
+                self.load_rules()
+                
+                # Show result
+                QMessageBox.information(
+                    self,
+                    translations[self.current_language].get('success', 'Success'),
+                    translations[self.current_language].get('rules_imported', 'Rules imported successfully')
+                )
+                
         except Exception as e:
-            self.logger.log_error(f"Error saving configuration: {e}")
+            self.logger.log_error(f"Error importing rules: {e}")
             QMessageBox.critical(
                 self,
                 translations[self.current_language].get('error', 'Error'),
-                f"Failed to save configuration: {str(e)}"
+                f"Failed to import rules: {str(e)}"
             )
     
     def reset_config(self):
@@ -1184,10 +1311,7 @@ class WindowsFirewallManager(QMainWindow):
         event.accept()
         pass
         
-    def create_qr_tab(self):
-        """Create the QR code generation tab"""
-        pass
-        
+    # Removed duplicate create_qr_tab method
     def create_config_tab(self):
         """Create the configuration tab with application settings"""
         config_tab = QWidget()
@@ -1591,8 +1715,94 @@ class WindowsFirewallManager(QMainWindow):
             # Fall back to default theme if there's an error
             self.setup_dark_theme()
 
+    def import_rules(self):
+        """Import rules from a JSON file"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.translations[self.current_language].get('import_rules', 'Import Rules'),
+            "",
+            "JSON Files (*.json);;All Files (*)"
+        )
+        
+        if file_path:
+            try:
+                # Ask if user wants to merge or replace existing rules
+                reply = QMessageBox.question(
+                    self,
+                    self.translations[self.current_language].get('import_options', 'Import Options'),
+                    self.translations[self.current_language].get('import_prompt', 'Merge with existing rules?\nClick No to replace all rules.'),
+                    QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+                )
+                
+                if reply == QMessageBox.Cancel:
+                    return
+                    
+                merge = (reply == QMessageBox.Yes)
+                
+                # Call the firewall manager to handle the import
+                if self.firewall.import_rules(file_path, merge=merge):
+                    self.load_rules()
+                    QMessageBox.information(
+                        self,
+                        self.translations[self.current_language].get('success', 'Success'),
+                        self.translations[self.current_language].get('import_success', 'Rules imported successfully')
+                    )
+                else:
+                    raise Exception("Failed to import rules")
+                    
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    self.translations[self.current_language].get('error', 'Error'),
+                    self.translations[self.current_language].get('import_error', 'Failed to import rules: ') + str(e)
+                )
+    
+    def export_rules(self):
+        """Export rules to a JSON file"""
+        if not self.firewall.get_rules():
+            QMessageBox.warning(
+                self,
+                self.translations[self.current_language].get('no_rules', 'No Rules'),
+                self.translations[self.current_language].get('no_rules_to_export', 'No rules to export')
+            )
+            return
+            
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            self.translations[self.current_language].get('export_rules', 'Export Rules'),
+            f"firewall_rules_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            "JSON Files (*.json);;All Files (*)"
+        )
+        
+        if file_path:
+            try:
+                if not file_path.lower().endswith('.json'):
+                    file_path += '.json'
+                    
+                if self.firewall.export_rules(file_path):
+                    QMessageBox.information(
+                        self,
+                        self.translations[self.current_language].get('success', 'Success'),
+                        self.translations[self.current_language].get('export_success', f'Rules exported to {file_path}')
+                    )
+                else:
+                    raise Exception("Failed to export rules")
+                    
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    self.translations[self.current_language].get('error', 'Error'),
+                    self.translations[self.current_language].get('export_error', 'Failed to export rules: ') + str(e)
+                )
+    
+    def on_rule_selection_changed(self):
+        """Handle rule selection change in the table"""
+        selected = len(self.rules_table.selectedItems()) > 0
+        self.edit_btn.setEnabled(selected)
+        self.delete_btn.setEnabled(selected)
+
 class RuleDialog(QDialog):
-    """Dialog for adding/editing firewall rules"""
+    """Dialog for adding/editing firewall rules with advanced options"""
     
     def __init__(self, parent, translations, rule=None):
         super().__init__(parent)
@@ -1600,5 +1810,172 @@ class RuleDialog(QDialog):
         self.rule = rule or {}
         self.setup_ui()
     
-    # [Previous method implementations would go here...]
-    # Copy over the setup_ui and get_rule methods from the original file
+    def setup_ui(self):
+        """Set up the rule dialog UI"""
+        self.setWindowTitle(
+            self.translations.get('edit_rule', 'Edit Rule') if self.rule.get('id') 
+            else self.translations.get('add_rule', 'Add Rule')
+        )
+        self.setMinimumWidth(600)
+        
+        layout = QVBoxLayout(self)
+        
+        # Create form layout for rule properties
+        form_layout = QFormLayout()
+        
+        # Rule name
+        self.name_edit = QLineEdit(self.rule.get('name', ''))
+        form_layout.addRow(self.translations.get('rule_name', 'Name:'), self.name_edit)
+        
+        # Action (Allow/Block/Reject)
+        self.action_combo = QComboBox()
+        self.action_combo.addItem(self.translations.get('allow', 'Allow'), 'allow')
+        self.action_combo.addItem(self.translations.get('block', 'Block'), 'block')
+        self.action_combo.addItem(self.translations.get('reject', 'Reject'), 'reject')
+        
+        # Set current action if editing
+        if 'action' in self.rule:
+            index = self.action_combo.findData(self.rule['action'])
+            if index >= 0:
+                self.action_combo.setCurrentIndex(index)
+        form_layout.addRow(self.translations.get('action', 'Action:'), self.action_combo)
+        
+        # Direction (In/Out/Both)
+        self.direction_combo = QComboBox()
+        self.direction_combo.addItem(self.translations.get('inbound', 'Inbound'), 'in')
+        self.direction_combo.addItem(self.translations.get('outbound', 'Outbound'), 'out')
+        self.direction_combo.addItem(self.translations.get('both', 'Both'), 'both')
+        
+        if 'direction' in self.rule:
+            index = self.direction_combo.findData(self.rule['direction'])
+            if index >= 0:
+                self.direction_combo.setCurrentIndex(index)
+        form_layout.addRow(self.translations.get('direction', 'Direction:'), self.direction_combo)
+        
+        # Protocol
+        self.protocol_combo = QComboBox()
+        self.protocol_combo.addItem('TCP', 'tcp')
+        self.protocol_combo.addItem('UDP', 'udp')
+        self.protocol_combo.addItem('ICMP', 'icmp')
+        self.protocol_combo.addItem('ICMPv6', 'icmpv6')
+        self.protocol_combo.addItem('All', 'all')
+        
+        if 'protocol' in self.rule:
+            index = self.protocol_combo.findData(self.rule['protocol'])
+            if index >= 0:
+                self.protocol_combo.setCurrentIndex(index)
+        form_layout.addRow(self.translations.get('protocol', 'Protocol:'), self.protocol_combo)
+        
+        # Ports
+        self.port_edit = QLineEdit(self.rule.get('port', ''))
+        self.port_edit.setPlaceholderText('80, 443, 1000-2000')
+        form_layout.addRow(self.translations.get('port', 'Port(s):'), self.port_edit)
+        
+        # Source IP
+        self.source_ip_edit = QLineEdit(self.rule.get('source_ip', ''))
+        self.source_ip_edit.setPlaceholderText('192.168.1.0/24 or any')
+        form_layout.addRow(self.translations.get('source_ip', 'Source IP:'), self.source_ip_edit)
+        
+        # Source Port
+        self.source_port_edit = QLineEdit(self.rule.get('source_port', ''))
+        self.source_port_edit.setPlaceholderText('1024-65535')
+        form_layout.addRow(self.translations.get('source_port', 'Source Port:'), self.source_port_edit)
+        
+        # IP Version
+        self.ip_version_combo = QComboBox()
+        self.ip_version_combo.addItem('IPv4', 'ip')
+        self.ip_version_combo.addItem('IPv6', 'ip6')
+        self.ip_version_combo.addItem(self.translations.get('any', 'Any'), 'any')
+        
+        if 'ip_version' in self.rule:
+            index = self.ip_version_combo.findData(self.rule['ip_version'])
+            if index >= 0:
+                self.ip_version_combo.setCurrentIndex(index)
+        form_layout.addRow(self.translations.get('ip_version', 'IP Version:'), self.ip_version_combo)
+        
+        # Connection State
+        self.state_combo = QComboBox()
+        self.state_combo.addItem(self.translations.get('any_state', 'Any State'), '')
+        self.state_combo.addItem('NEW', 'new')
+        self.state_combo.addItem('ESTABLISHED', 'established')
+        self.state_combo.addItem('RELATED', 'related')
+        self.state_combo.addItem('INVALID', 'invalid')
+        
+        if 'state' in self.rule:
+            index = self.state_combo.findData(self.rule['state'])
+            if index >= 0:
+                self.state_combo.setCurrentIndex(index)
+        form_layout.addRow(self.translations.get('connection_state', 'Connection State:'), self.state_combo)
+        
+        # Logging options
+        self.logging_group = QGroupBox(self.translations.get('logging', 'Logging'))
+        logging_layout = QVBoxLayout()
+        
+        self.enable_logging = QCheckBox(self.translations.get('enable_logging', 'Enable logging for this rule'))
+        self.enable_logging.setChecked(self.rule.get('logging', False))
+        logging_layout.addWidget(self.enable_logging)
+        
+        log_options_layout = QHBoxLayout()
+        
+        # Log Level
+        self.log_level_combo = QComboBox()
+        self.log_level_combo.addItem('Info', 'info')
+        self.log_level_combo.addItem('Warning', 'warning')
+        self.log_level_combo.addItem('Error', 'error')
+        
+        if 'log_level' in self.rule:
+            index = self.log_level_combo.findData(self.rule['log_level'])
+            if index >= 0:
+                self.log_level_combo.setCurrentIndex(index)
+        
+        log_options_layout.addWidget(QLabel(self.translations.get('log_level', 'Log Level:')))
+        log_options_layout.addWidget(self.log_level_combo)
+        
+        # Log Prefix
+        self.log_prefix_edit = QLineEdit(self.rule.get('log_prefix', 'RULE'))
+        log_options_layout.addWidget(QLabel(self.translations.get('log_prefix', 'Prefix:')), 1)
+        log_options_layout.addWidget(self.log_prefix_edit, 2)
+        
+        logging_layout.addLayout(log_options_layout)
+        self.logging_group.setLayout(logging_layout)
+        
+        # Description
+        self.desc_edit = QTextEdit(self.rule.get('description', ''))
+        self.desc_edit.setMaximumHeight(80)
+        form_layout.addRow(self.translations.get('description', 'Description:'), self.desc_edit)
+        
+        # Add form layout to main layout
+        layout.addLayout(form_layout)
+        
+        # Add logging group
+        layout.addWidget(self.logging_group)
+        
+        # Add button box
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+    
+    def get_rule(self):
+        """Get the rule data from the dialog"""
+        # Create a new rule or update the existing one
+        rule = self.rule.copy() if self.rule else {}
+        
+        # Update rule with form values
+        rule.update({
+            'name': self.name_edit.text().strip(),
+            'action': self.action_combo.currentData(),
+            'direction': self.direction_combo.currentData(),
+            'protocol': self.protocol_combo.currentData(),
+            'port': self.port_edit.text().strip(),
+            'source_ip': self.source_ip_edit.text().strip(),
+            'source_port': self.source_port_edit.text().strip(),
+            'ip_version': self.ip_version_combo.currentData(),
+            'state': self.state_combo.currentData(),
+            'logging': self.enable_logging.isChecked(),
+            'log_level': self.log_level_combo.currentData(),
+            'log_prefix': self.log_prefix_edit.text().strip(),
+            'description': self.desc_edit.toPlainText().strip()
+        })
+        
+        return rule

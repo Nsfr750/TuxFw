@@ -1,29 +1,33 @@
 # TuxFw
 
-A comprehensive Windows firewall management application.
+A comprehensive cross-platform firewall management application with a modern UI.
 
 ## Features
 
 - **Bilingual Interface**: Complete support for English and Italian languages
-- **Rule Management**: Add, edit, delete, and manage firewall rules
-- **Dark Theme**: Modern dark theme for better visibility
-- **Log Viewer**: Advanced log viewer with search and filtering
+- **Rule Management**: Add, edit, delete, import, and export firewall rules
+- **Dark Theme**: Modern dark theme with consistent styling across all components
+- **QR Code Generation**: Share rules easily via QR codes
+- **Log Viewer**: Advanced log viewer with search, filtering, and syntax highlighting
 - **Export Capabilities**: Export logs in multiple formats (TXT, CSV, JSON)
-- **Real-time Monitoring**: Monitor firewall status in real-time
-- **User-friendly UI**: Intuitive interface built with PySide6
+- **Real-time Monitoring**: Monitor firewall status and activity in real-time
+- **User-friendly UI**: Intuitive tabbed interface built with PySide6
 - **Cross-platform**: Works on Windows, macOS, and Linux
+- **Mock Firewall**: Built-in mock firewall for development and testing
+- **Responsive Design**: Adapts to different screen sizes and resolutions
 
 ## Requirements
 
 - Python 3.8+
 - PySide6 (Qt6 bindings for Python)
-- Wand (ImageMagick bindings)
+- Wand (ImageMagick bindings for image processing)
 - qrcode (QR code generation)
 - pip-nftables (Linux firewall support)
 - wheel (building)
 - shiboken6 (building)
 - psutil (system monitoring)
 - pytest (testing)
+- Pillow (image processing, required by qrcode)
 
 ## Installation
 

@@ -17,7 +17,16 @@ This document outlines the development roadmap for TuxFw, a powerful firewall ma
 
 ## Core Features
 
-- [x] Basic firewall rule management
+### Implemented in v0.0.1
+- [x] Basic firewall rule management (add, edit, delete, import/export)
+- [x] Bilingual interface (English/Italian)
+- [x] Dark theme with Wand integration
+- [x] QR code generation for rule sharing
+- [x] Log viewer with search and filtering
+- [x] Mock firewall for development
+- [x] Cross-platform support (Windows, Linux, macOS)
+
+### Upcoming Features
 - [x] User-friendly GUI
 - [x] Log viewer with filtering
 - [ ] Real-time traffic monitoring
@@ -80,7 +89,7 @@ This document outlines the development roadmap for TuxFw, a powerful firewall ma
   - [ ] VPN kill switch
   - [ ] Split tunneling
 
-### Phase 3: Enterprise Features (v2.0.0)
+### Phase 3: Enterprise Features (v2.0.0) 
 
 **Target: Q1 2025**
 
