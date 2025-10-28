@@ -1,0 +1,16 @@
+{
+  "name": "WAN",
+  "description": "Wide Area Network (Internet)",
+  "networks": [
+    "0.0.0.0/0"
+  ],
+  "interfaces": [
+    "ppp0",
+    "ppp1"
+  ],
+  "is_vpn": false,
+  "vpn_config": {},
+  "tags": [
+    "untrusted"
+  ]
+}

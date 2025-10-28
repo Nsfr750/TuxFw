@@ -6,18 +6,31 @@ import json
 import sys
 import uuid
 import platform
+import threading
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Union, Tuple
+from typing import Dict, List, Optional, Any, Union, Tuple, Callable
 from PySide6.QtWidgets import (
     QDialog, QFormLayout, QWidget, QLineEdit, QTextEdit,
     QComboBox, QCheckBox, QDialogButtonBox, QFileDialog, QMessageBox,
     QVBoxLayout, QLabel, QSpinBox, QGroupBox, QHBoxLayout
 )
-from PySide6.QtCore import Qt, QCoreApplication, QSize
+from PySide6.QtCore import Qt, QCoreApplication, QSize, QObject, Signal
 from firewall.script.logger import get_logger
 
 # Import nftables manager
 from firewall.script.nftables_manager import NFTablesManager
+from firewall.script.network_monitor import NetworkMonitor, IntrusionDetectionSystem
+from firewall.script.network_zones import ZoneManager, VPNManager, NetworkZone
+from firewall.script.win_firewall import WindowsFirewallController
+from .security_utils import (
+    EnhancedSecurity,
+    SecurityAction,
+    RateLimitConfig,
+    RateLimiter,
+    IPReputationChecker,
+    GeoIPBlocker,
+    PortKnocking,
+)
 
 class FirewallConfig:
     """
@@ -833,12 +846,20 @@ class RuleDialog(QDialog):
         }
 
 
+class FirewallSignals(QObject):
+    """Signals for the FirewallManager to communicate with the UI"""
+    network_stats_updated = Signal(dict)  # Network statistics
+    connection_detected = Signal(dict)    # New connection detected
+    intrusion_detected = Signal(dict)     # Potential intrusion detected
+    vpn_status_changed = Signal(dict)     # VPN connection status changed
+    vpn_log_line = Signal(str)            # VPN log line appended
+    
+
 class FirewallManager:
     """
     Main firewall management class that handles the core functionality
     of the firewall application.
     """
-    
     def __init__(self, config_path=None, translations=None):
         """
         Initialize the FirewallManager
@@ -872,45 +893,285 @@ class FirewallManager:
         self.nft = None
         self._init_nftables()
         
+        # Initialize network monitoring
+        self.network_monitor = NetworkMonitor(update_interval=2.0)
+        self.ids = IntrusionDetectionSystem()
+        
+        # Initialize zone and VPN management
+        self.zone_manager = ZoneManager()
+        self.vpn_manager = VPNManager(self.zone_manager)
+        
+        # Initialize enhanced security
+        self.security = EnhancedSecurity()
+        
+        # Windows Firewall controller for kill switch / split tunneling
+        try:
+            self.winfw = WindowsFirewallController()
+        except Exception:
+            self.winfw = None
+        
+        # Setup signals for UI updates
+        self.signals = FirewallSignals()
+        
+        # Start network monitoring
+        self._setup_network_monitoring()
+        # Apply any saved split tunneling policies
+        try:
+            self._apply_saved_split_tunneling()
+        except Exception as e:
+            self.logger.error(f"Failed to apply saved split tunneling: {e}")
+        
         self.logger.log_firewall_event("MANAGER_INIT", "Firewall manager initialized")
+
+    def _setup_network_monitoring(self):
+        """Start network monitoring and wire callbacks to Qt signals and IDS."""
+        try:
+            self._last_stats = {}
+
+            def _on_update(stats_dict, connections_list):
+                # Prepare stats payload
+                try:
+                    payload = {"interfaces": {}}
+                    for iface, st in stats_dict.items():
+                        payload["interfaces"][iface] = {
+                            "bytes_sent": getattr(st, "bytes_sent", 0),
+                            "bytes_recv": getattr(st, "bytes_recv", 0),
+                            "packets_sent": getattr(st, "packets_sent", 0),
+                            "packets_recv": getattr(st, "packets_recv", 0),
+                            "errors_in": getattr(st, "errors_in", 0),
+                            "errors_out": getattr(st, "errors_out", 0),
+                            "drop_in": getattr(st, "drop_in", 0),
+                            "drop_out": getattr(st, "drop_out", 0),
+                            "connections": 0,
+                        }
+
+                    # Emit updated stats
+                    if hasattr(self, 'signals'):
+                        self.signals.network_stats_updated.emit(payload)
+
+                    # Process connections: emit to UI and run IDS checks
+                    for conn in connections_list:
+                        conn_dict = {
+                            "protocol": getattr(conn, "protocol", ""),
+                            "local_addr": getattr(conn, "local_addr", ""),
+                            "remote_addr": getattr(conn, "remote_addr", ""),
+                            "status": getattr(conn, "status", ""),
+                            "process_name": getattr(conn, "process_name", ""),
+                            "pid": getattr(conn, "pid", 0),
+                        }
+                        if hasattr(self, 'signals'):
+                            self.signals.connection_detected.emit(conn_dict)
+
+                        # IDS analysis
+                        try:
+                            threats = self.ids.analyze_connection(conn)
+                            for t in threats:
+                                alert = {
+                                    "timestamp": datetime.now().isoformat(),
+                                    "severity": t.get("severity", "info"),
+                                    "description": t.get("description", ""),
+                                    "connection": {
+                                        "remote_addr": getattr(conn, "remote_addr", ""),
+                                        "local_addr": getattr(conn, "local_addr", ""),
+                                    },
+                                }
+                                if hasattr(self, 'signals'):
+                                    self.signals.intrusion_detected.emit(alert)
+                        except Exception as ids_err:
+                            self.logger.error(f"IDS analysis error: {ids_err}")
+
+                except Exception as cb_err:
+                    self.logger.error(f"Network monitor callback error: {cb_err}")
+
+            self.network_monitor.register_callback(_on_update)
+            self.network_monitor.start()
+            self.logger.info("Network monitoring initialized")
+
+            # Hook VPN status back into UI
+            try:
+                if hasattr(self.vpn_manager, 'register_status_callback'):
+                    self.vpn_manager.register_status_callback(self._on_vpn_status_update)
+                if hasattr(self.vpn_manager, 'register_log_callback'):
+                    self.vpn_manager.register_log_callback(self._on_vpn_log)
+            except Exception as e:
+                self.logger.error(f"Failed to register VPN status callback: {e}")
+        except Exception as e:
+            self.logger.error(f"Failed to set up network monitoring: {e}")
+
+    # ----- Public helpers used by MonitoringTab -----
+    def get_network_connections(self) -> List[Dict[str, Any]]:
+        """Return current network connections as list of dicts for the UI."""
+        try:
+            conns = []
+            for c in self.network_monitor.get_current_connections():
+                conns.append({
+                    "protocol": getattr(c, "protocol", ""),
+                    "local_addr": getattr(c, "local_addr", ""),
+                    "remote_addr": getattr(c, "remote_addr", ""),
+                    "status": getattr(c, "status", ""),
+                    "process_name": getattr(c, "process_name", ""),
+                    "pid": getattr(c, "pid", 0),
+                })
+            return conns
+        except Exception as e:
+            self.logger.error(f"Error fetching network connections: {e}")
+            return []
+
+    # ----- VPN control helpers -----
+    def _on_vpn_status_update(self, status: dict):
+        try:
+            if hasattr(self, 'signals'):
+                self.signals.vpn_status_changed.emit(status)
+        except Exception as e:
+            self.logger.error(f"Error emitting VPN status: {e}")
+
+    def _on_vpn_log(self, payload: dict):
+        # payload: {"name": <vpn_name>, "line": <text>}
+        try:
+            line = payload.get("line") if isinstance(payload, dict) else str(payload)
+            if line is None:
+                return
+            if hasattr(self, 'signals'):
+                self.signals.vpn_log_line.emit(line.rstrip())
+        except Exception as e:
+            self.logger.error(f"Error emitting VPN log: {e}")
+
+    def connect_vpn(self, name: str) -> bool:
+        try:
+            return self.vpn_manager.connect_vpn(name)
+        except Exception as e:
+            self.logger.error(f"Connect VPN failed for {name}: {e}")
+            return False
+
+    def disconnect_vpn(self, name: str) -> bool:
+        try:
+            return self.vpn_manager.disconnect_vpn(name)
+        except Exception as e:
+            self.logger.error(f"Disconnect VPN failed for {name}: {e}")
+            return False
+
+    def set_kill_switch(self, name: str, enabled: bool) -> bool:
+        try:
+            if enabled:
+                ok = self.vpn_manager.enable_kill_switch(name)
+                if ok and self.winfw:
+                    self.winfw.enable_kill_switch()
+                return ok
+            else:
+                ok = self.vpn_manager.disable_kill_switch(name)
+                if ok and self.winfw:
+                    self.winfw.disable_kill_switch()
+                return ok
+        except Exception as e:
+            self.logger.error(f"Set kill switch failed for {name}: {e}")
+            return False
+
+    def set_split_tunneling(self, name: str, mode: str, routes: list[str]) -> bool:
+        try:
+            ok = self.vpn_manager.set_split_tunneling(name, mode, routes)
+            if ok and self.winfw:
+                # Apply Windows firewall rules
+                if routes:
+                    if mode.lower() == 'exclude':
+                        self.winfw.apply_split_tunneling_exclude(routes)
+                    else:
+                        self.winfw.apply_split_tunneling_include(routes)
+                else:
+                    self.winfw.clear_split_tunneling()
+            return ok
+        except Exception as e:
+            self.logger.error(f"Set split tunneling failed for {name}: {e}")
+            return False
+
+    def get_split_tunneling(self, name: str) -> dict:
+        try:
+            return self.vpn_manager.get_split_tunneling(name)
+        except Exception:
+            return {"mode": "exclude", "routes": []}
+
+    def get_vpn_list(self) -> List[str]:
+        try:
+            return list(self.vpn_manager.vpn_clients.keys())
+        except Exception:
+            return []
+
+    def get_vpn_status(self, name: str | None = None) -> dict:
+        try:
+            return self.vpn_manager.get_vpn_status(name) if hasattr(self.vpn_manager, 'get_vpn_status') else {}
+        except Exception:
+            return {}
+
+    def _apply_saved_split_tunneling(self):
+        # Iterate all VPNs and apply split tunneling state (Windows FW rules and routes)
+        try:
+            names = self.get_vpn_list()
+            for name in names:
+                cfg = self.get_split_tunneling(name)
+                mode = (cfg.get('mode') or 'exclude').lower()
+                routes = cfg.get('routes') or []
+                if routes:
+                    self.set_split_tunneling(name, mode, routes)
+        except Exception as e:
+            self.logger.error(f"Error in applying saved split tunneling: {e}")
     
     def _load_rules(self):
         """Load rules from the configuration"""
         try:
-            rules = self._config.get('rules', [])
-            if rules:
+            rules = self._config.get_rules() if hasattr(self._config, 'get_rules') else []
+            if isinstance(rules, list):
                 self._rules = rules
-                self.logger.info(f"Loaded {len(rules)} rules from configuration")
+                self.logger.info(f"Loaded {len(self._rules)} rules from configuration")
         except Exception as e:
             self.logger.error(f"Error loading rules: {str(e)}")
-    
-    def _save_rules(self):
-        """Save rules to the configuration"""
-        try:
-            self._config.set('rules', self._rules)
-            self._config.save()
-            return True
-        except Exception as e:
-            self.logger.error(f"Error saving rules: {str(e)}")
-            return False
     
     def _init_nftables(self):
         """Initialize the nftables manager."""
         try:
-            self.nft = NFTablesManager(logger=self.logger)
-            self.logger.log_info("Successfully initialized nftables manager")
-            return True
-        except RuntimeError as e:
-            self.logger.log_error(f"Failed to initialize nftables: {e}")
-            self._show_error(
-                "NFTables Initialization Error",
-                f"Failed to initialize nftables: {e}\n\n"
-                "Please ensure nftables is installed and you have sufficient permissions."
-            )
-            return False
+            self.nft = NFTablesManager()
+            self.logger.info("NFTables manager initialized")
         except Exception as e:
             self.logger.log_error(f"Unexpected error initializing nftables: {e}")
             return False
+
+    def block_ip(self, ip: str, duration: int = 3600) -> bool:
+        try:
+            self.security.block_ip(ip, duration)
+            return True
+        except Exception:
+            return False
+
+    def unblock_ip(self, ip: str) -> bool:
+        try:
+            self.security.unblock_ip(ip)
+            return True
+        except Exception:
+            return False
+
+    def block_country(self, country_code: str) -> bool:
+        try:
+            self.security.geo_blocker.block_country(country_code.upper())
+            return True
+        except Exception:
+            return False
+
+    def unblock_country(self, country_code: str) -> bool:
+        try:
+            self.security.geo_blocker.unblock_country(country_code.upper())
+            return True
+        except Exception:
+            return False
+
+    def get_blocked_countries(self) -> List[str]:
+        try:
+            return sorted(list(self.security.geo_blocker.blocked_countries))
+        except Exception:
+            return []
+
+    def get_blocked_ips(self) -> Dict[str, float]:
+        try:
+            return dict(self.security.blocked_ips)
+        except Exception:
+            return {}
             
     def export_rules(self, file_path: str) -> bool:
         """

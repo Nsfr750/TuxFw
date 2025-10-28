@@ -1,0 +1,13 @@
+{
+  "name": "DMZ",
+  "description": "Demilitarized Zone",
+  "networks": [],
+  "interfaces": [
+    "dmz0"
+  ],
+  "is_vpn": false,
+  "vpn_config": {},
+  "tags": [
+    "semi-trusted"
+  ]
+}

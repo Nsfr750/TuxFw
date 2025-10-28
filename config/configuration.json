@@ -1,0 +1,31 @@
+{
+    "security": {
+        "rate_limiting": {
+            "enabled": true,
+            "default_limit": 100,
+            "default_window": 60,
+            "endpoints": {
+                "ssh": {"max_requests": 10, "time_window": 60},
+                "http": {"max_requests": 200, "time_window": 60},
+                "api": {"max_requests": 1000, "time_window": 300}
+            }
+        },
+        "geo_blocking": {
+            "enabled": true,
+            "blocked_countries": ["CN", "RU", "KP", "IR"]
+        },
+        "ip_reputation": {
+            "enabled": true,
+            "update_interval": 3600,
+            "threat_feeds": [
+                "https://www.binarydefense.com/banlist.txt",
+                "https://lists.blocklist.de/lists/ssh.txt"
+            ]
+        },
+        "port_knocking": {
+            "enabled": true,
+            "sequence": [1000, 2000, 3000],
+            "window": 10
+        }
+    }
+}

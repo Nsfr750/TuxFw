@@ -7,7 +7,10 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QHeaderView, QMessageBox, QFileDialog, QSplitter, QCheckBox,
                              QSpinBox, QMenuBar, QMenu, QStatusBar, QProgressBar, QDialog,
                              QDialogButtonBox, QVBoxLayout as QVBox, QHBoxLayout as QHBox,
-                             QApplication, QMessageBox, QSizePolicy, QScrollArea)
+                             QApplication, QMessageBox, QSizePolicy, QScrollArea, QStyle)
+                             
+# Import monitoring tab
+from firewall.UI.monitoring_tab import MonitoringTab
 from PySide6.QtCore import Qt, QTimer, QThread, Signal, QSize
 from PySide6.QtGui import QPixmap, QIcon, QFont, QAction, QImage, QPixmap
 import wand.image
@@ -364,13 +367,15 @@ class WindowsFirewallManager(QMainWindow):
         # Create tabs
         self.status_tab = self.create_status_tab()
         self.rules_tab = self.create_rules_tab()
+        self.monitoring_tab = MonitoringTab(self, self.firewall)  # Add monitoring tab
         self.logs_tab = self.create_logs_tab()
         self.qr_tab = self.create_qr_tab()
         self.config_tab = self.create_config_tab()
         
-        # Add tabs to the tab widget
+        # Add tabs to the tab widget in a logical order
         self.tab_widget.addTab(self.status_tab, translations[self.current_language].get('tab_status', 'Status'))
         self.tab_widget.addTab(self.rules_tab, translations[self.current_language].get('tab_rules', 'Rules'))
+        self.tab_widget.addTab(self.monitoring_tab, translations[self.current_language].get('tab_monitoring', 'Monitoring'))
         self.tab_widget.addTab(self.logs_tab, translations[self.current_language].get('tab_logs', 'Logs'))
         self.tab_widget.addTab(self.qr_tab, translations[self.current_language].get('tab_qr', 'QR Code'))
         self.tab_widget.addTab(self.config_tab, translations[self.current_language].get('tab_config', 'Configuration'))
