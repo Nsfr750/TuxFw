@@ -10,7 +10,9 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QApplication, QMessageBox, QSizePolicy, QScrollArea)
 from PySide6.QtCore import Qt, QTimer, QThread, Signal, QSize
 from PySide6.QtGui import QPixmap, QIcon, QFont, QAction, QImage, QPixmap
-from wand.image import Image as WandImage
+import wand.image
+import wand.color
+import io
 from firewall.lang.translations import translations
 from firewall.UI.about import AboutDialog
 from firewall.UI.menu import MenuManager
@@ -967,6 +969,14 @@ class WindowsFirewallManager(QMainWindow):
         qr_tab = QWidget()
         layout = QVBoxLayout(qr_tab)
         
+        # Add generate button and connect it
+        self.generate_btn = QPushButton(translations[self.current_language].get('generate_qr', 'Generate QR Code'))
+        def on_generate_clicked():
+            self.logger.info("Generate button clicked - connection working")
+            self.generate_qr_code()
+        self.generate_btn.clicked.connect(on_generate_clicked)
+        layout.addWidget(self.generate_btn)
+    
         # Add a label to indicate what this tab is for
         info_label = QLabel(translations[self.current_language].get('qr_tab_info', 'Generate QR codes for sharing firewall rules'))
         info_label.setWordWrap(True)
@@ -1122,64 +1132,63 @@ class WindowsFirewallManager(QMainWindow):
         self.help_window.raise_()
     
     def generate_qr_code(self):
-        """Generate a QR code from the input text using Wand"""
-        text = self.qr_input.toPlainText().strip()
-        if not text:
-            QMessageBox.warning(
-                self,
-                translations[self.current_language].get('warning', 'Warning'),
-                translations[self.current_language].get('qr_empty_warning', 'Please enter some text first')
-            )
-            return
-        
+        # Generate a QR code from the input text using pure Python and Qt
         try:
-            # Generate QR code using qrcode
-            qr = qrcode.QRCode(
-                version=1,
-                error_correction=qrcode.constants.ERROR_CORRECT_L,
-                box_size=10,
-                border=4,
+            self.logger.info("Generate QR Code button clicked")
+            
+            # Get text from input
+            text = self.qr_input.toPlainText().strip()
+            self.logger.info(f"Input text: {text[:50]}{'...' if len(text) > 50 else ''}")
+            
+            if not text:
+                self.logger.warning("No text entered for QR code generation")
+                QMessageBox.warning(
+                    self,
+                    translations[self.current_language].get('warning', 'Warning'),
+                    translations[self.current_language].get('qr_empty_warning', 'Please enter some text first')
+                )
+                return
+
+            self.logger.info("Generating QR code data...")
+            from firewall.UI.qr_generator import generate_qr_code_data, qr_to_qimage
+            qr_data = generate_qr_code_data(text)
+            self.logger.info(f"QR data generated, size: {len(qr_data)}x{len(qr_data[0]) if qr_data else 0}")
+            
+            self.logger.info("Converting QR data to QImage...")
+            qimage = qr_to_qimage(qr_data, scale=10, border=4)
+            self.logger.info(f"QImage created, size: {qimage.width()}x{qimage.height()}")
+            
+            self.logger.info("Converting to QPixmap...")
+            pixmap = QPixmap.fromImage(qimage)
+            if pixmap.isNull():
+                raise ValueError("Failed to create QPixmap from QImage")
+            self.logger.info("QPixmap created successfully")
+            
+            # Calculate target size with some margin
+            target_width = max(100, self.qr_label.width() - 10)
+            target_height = max(100, self.qr_label.height() - 10)
+            self.logger.info(f"Scaling to: {target_width}x{target_height}")
+            
+            # Scale the pixmap
+            scaled_pixmap = pixmap.scaled(
+                target_width,
+                target_height,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
             )
-            qr.add_data(text)
-            qr.make(fit=True)
             
-            # Create a temporary file to store the QR code
-            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as temp_file:
-                # Generate QR code as a PIL image
-                img = qr.make_image(fill_color="black", back_color="white")
-                img.save(temp_file.name)
-                
-                # Use Wand to read the image
-                with wand.image.Image(filename=temp_file.name) as img_wand:
-                    # Convert to QPixmap and display
-                    img_wand.format = 'png'
-                    img_wand.background_color = wand.color.Color('#2d2d2d')
-                    img_wand.alpha_channel = 'remove'
-                    
-                    # Save to a temporary file
-                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as final_file:
-                        img_wand.save(filename=final_file.name)
-                        pixmap = QPixmap(final_file.name)
-                        self.qr_label.setPixmap(pixmap)
-                        
-                        # Clean up
-                        try:
-                            os.unlink(final_file.name)
-                        except:
-                            pass
-            
-            # Clean up
-            try:
-                os.unlink(temp_file.name)
-            except:
-                pass
+            self.logger.info("Updating QR code display...")
+            self.qr_label.setPixmap(scaled_pixmap)
+            self.qr_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.logger.info("QR code displayed successfully")
             
         except Exception as e:
-            self.logger.error(f"Error generating QR code: {e}")
+            error_msg = f"Error generating QR code: {str(e)}"
+            self.logger.error(error_msg, exc_info=True)
             QMessageBox.critical(
                 self,
                 translations[self.current_language].get('error', 'Error'),
-                translations[self.current_language].get('qr_generation_error', 'Error generating QR code')
+                error_msg
             )
     
     def import_rules(self):
