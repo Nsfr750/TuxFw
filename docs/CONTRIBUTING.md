@@ -97,6 +97,15 @@ Unsure where to begin contributing? You can start by looking through the `good f
    pip install -e .
    ```
 
+5. Add upstream remote (optional):
+
+   ```bash
+   git remote add upstream https://github.com/Nsfr750/TuxFw.git
+   git fetch upstream
+   git checkout main
+   git merge upstream/main
+   ```
+
 ### Running Tests
 
 ```bash
