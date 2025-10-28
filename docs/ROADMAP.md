@@ -4,11 +4,9 @@
 - [Introduction](#introduction)
 - [Core Features](#core-features)
 - [Development Phases](#development-phases)
-  - [Phase 1: Core Functionality (v1.0.0)](#phase-1-core-functionality-v100)
-  - [Phase 2: Advanced Features (v1.5.0)](#phase-2-advanced-features-v150)
-  - [Phase 3: Enterprise Features (v2.0.0)](#phase-3-enterprise-features-v200)
-  - [Phase 4: Cloud Integration (v2.5.0)](#phase-4-cloud-integration-v250)
-- [Contributing](#contributing)
+  - [Phase 1:](#phase-1)
+  - [Phase 2:](#phase-2)
+  [Contributing](#contributing)
 - [License](#license)
 
 ## Introduction
@@ -32,16 +30,6 @@ This document outlines the development roadmap for TuxFw, a powerful firewall ma
 - [x] VPN integration (OpenVPN/WireGuard) with Kill Switch & Split Tunneling (Windows)
 - [x] Security tab (IP and Country blocking)
 
-### Upcoming Features
-- [ ] Cloud synchronization
-- [ ] Multi-user support with role-based access
-
-## Development Phases
-
-### Phase 1: Core Functionality (v1.0.0)
-
-**Target: Q1 2026**
-
 #### Features
 - [x] Basic firewall rule management
   - [x] Add/remove rules
@@ -60,17 +48,6 @@ This document outlines the development roadmap for TuxFw, a powerful firewall ma
   - [x] Responsive design
   - [x] Internationalization (i18n)
 
-- [ ] Documentation
-  - [x] Basic README
-  - [x] User manual (User Guide)
-  - [ ] API documentation
-  - [ ] Developer guide
-
-### Phase 2: Advanced Features (v1.5.0)
-
-**Target: Q3 2026**
-
-#### Features
 - [x] Enhanced Security
   - [x] Rate limiting
   - [x] GeoIP blocking
@@ -89,7 +66,11 @@ This document outlines the development roadmap for TuxFw, a powerful firewall ma
   - [x] VPN kill switch (Windows)
   - [x] Split tunneling (Windows)
 
-### Phase 3: Enterprise Features (v2.0.0) 
+- [x] Documentation
+  - [x] Basic README
+  - [x] User manual (User Guide)
+
+### Phase 1:
 
 **Target: Q1 2027**
 
@@ -109,7 +90,7 @@ This document outlines the development roadmap for TuxFw, a powerful firewall ma
   - [ ] Scheduled reports
   - [ ] Compliance reporting
 
-### Phase 4: Cloud Integration (v2.5.0)
+### Phase 2:
 
 **Target: Q3 2027**
 
