@@ -12,14 +12,10 @@ from PySide6.QtWidgets import (
     QComboBox, QCheckBox, QDialogButtonBox, QFileDialog, QMessageBox
 )
 from PySide6.QtCore import Qt, QCoreApplication
-from logger import get_logger
+from firewall.script.logger import get_logger
 
 # Import nftables manager
-try:
-    from .nftables_manager import NFTablesManager
-except ImportError:
-    # Fallback for direct script execution
-    from nftables_manager import NFTablesManager
+from firewall.script.nftables_manager import NFTablesManager
 
 class FirewallConfig:
     """
@@ -663,80 +659,165 @@ class FirewallConfig:
 
 
 class RuleDialog(QDialog):
-    """Dialog for adding/editing firewall rules"""
-
+    """Dialog for adding/editing firewall rules with advanced options"""
+    
     def __init__(self, parent, translations, rule=None):
         super().__init__(parent)
         self.translations = translations
         self.rule = rule or {}
         self.setup_ui()
-
+        
     def setup_ui(self):
-        """Setup the rule dialog UI"""
-        self.setWindowTitle(self.translations['add_rule'] if not self.rule else self.translations['edit_rule'])
-
-        # Create form widget
-        form_widget = QWidget()
-        layout = QFormLayout(form_widget)
-
+        """Setup the rule dialog UI with advanced options"""
+        self.setWindowTitle(self.translations.get('add_rule', 'Add Firewall Rule'))
+        layout = QVBoxLayout(self)
+        
+        # Create tab widget for different sections
+        tabs = QTabWidget()
+        
+        # Basic tab
+        basic_tab = QWidget()
+        basic_layout = QFormLayout(basic_tab)
+        
         # Rule name
-        self.name_input = QLineEdit()
-        self.name_input.setText(self.rule.get('name', ''))
-        layout.addRow(self.translations['rule_name'] + ":", self.name_input)
-
-        # Description
-        self.description_input = QLineEdit()
-        self.description_input.setText(self.rule.get('description', ''))
-        layout.addRow(self.translations['description'] + ":", self.description_input)
-
-        # Protocol
-        self.protocol_combo = QComboBox()
-        self.protocol_combo.addItems(['TCP', 'UDP', 'ICMP'])
-        self.protocol_combo.setCurrentText(self.rule.get('protocol', 'TCP'))
-        layout.addRow(self.translations['protocol'] + ":", self.protocol_combo)
-
-        # Port
-        self.port_input = QLineEdit()
-        self.port_input.setText(self.rule.get('port', ''))
-        layout.addRow(self.translations['port'] + ":", self.port_input)
-
-        # Direction
-        self.direction_combo = QComboBox()
-        self.direction_combo.addItems(['IN', 'OUT'])
-        self.direction_combo.setCurrentText(self.rule.get('direction', 'IN'))
-        layout.addRow(self.translations['direction'] + ":", self.direction_combo)
-
+        self.name_edit = QLineEdit(self.rule.get('name', ''))
+        basic_layout.addRow(self.translations.get('name', 'Name:'), self.name_edit)
+        
+        # Enabled checkbox
+        self.enabled_check = QCheckBox(self.translations.get('enabled', 'Enabled'))
+        self.enabled_check.setChecked(self.rule.get('enabled', True))
+        basic_layout.addRow('', self.enabled_check)
+        
         # Action
         self.action_combo = QComboBox()
-        self.action_combo.addItems(['ALLOW', 'BLOCK'])
-        self.action_combo.setCurrentText(self.rule.get('action', 'ALLOW'))
-        layout.addRow(self.translations['action'] + ":", self.action_combo)
-
-        # Enabled
-        self.enabled_cb = QCheckBox(self.translations['enabled'])
-        self.enabled_cb.setChecked(self.rule.get('enabled', True))
-        layout.addRow("", self.enabled_cb)
-
-        # Set the form as the dialog's widget
-        self.layout().addWidget(form_widget, 0, 0, 1, self.layout().columnCount())
-
-        # Add buttons
-        self.addButton(self.translations['ok'], QMessageBox.ButtonRole.AcceptRole)
-        self.addButton(self.translations['cancel'], QMessageBox.ButtonRole.RejectRole)
-
-        self.setDefaultButton(self.button(QMessageBox.ButtonRole.AcceptRole))
-
+        self.action_combo.addItems(['accept', 'drop', 'reject', 'log'])
+        if 'action' in self.rule:
+            index = self.action_combo.findText(self.rule['action'])
+            if index >= 0:
+                self.action_combo.setCurrentIndex(index)
+        basic_layout.addRow(self.translations.get('action', 'Action:'), self.action_combo)
+        
+        # Direction
+        self.direction_combo = QComboBox()
+        self.direction_combo.addItems(['in', 'out', 'both'])
+        if 'direction' in self.rule:
+            index = self.direction_combo.findText(self.rule['direction'])
+            if index >= 0:
+                self.direction_combo.setCurrentIndex(index)
+        basic_layout.addRow(self.translations.get('direction', 'Direction:'), self.direction_combo)
+        
+        # Protocol tab
+        protocol_tab = QWidget()
+        protocol_layout = QFormLayout(protocol_tab)
+        
+        # Protocol selection
+        self.protocol_combo = QComboBox()
+        self.protocol_combo.addItems(['tcp', 'udp', 'icmp', 'icmpv6', 'any'])
+        if 'protocol' in self.rule:
+            index = self.protocol_combo.findText(self.rule['protocol'])
+            if index >= 0:
+                self.protocol_combo.setCurrentIndex(index)
+        protocol_layout.addRow(self.translations.get('protocol', 'Protocol:'), self.protocol_combo)
+        
+        # Source address
+        self.source_ip = QLineEdit(self.rule.get('source_ip', ''))
+        protocol_layout.addRow(self.translations.get('source_ip', 'Source IP:'), self.source_ip)
+        
+        # Source port
+        self.source_port = QLineEdit(str(self.rule.get('source_port', '')))
+        protocol_layout.addRow(self.translations.get('source_port', 'Source Port:'), self.source_port)
+        
+        # Destination address
+        self.dest_ip = QLineEdit(self.rule.get('dest_ip', ''))
+        protocol_layout.addRow(self.translations.get('dest_ip', 'Destination IP:'), self.dest_ip)
+        
+        # Destination port
+        self.dest_port = QLineEdit(str(self.rule.get('dest_port', '')))
+        protocol_layout.addRow(self.translations.get('dest_port', 'Destination Port:'), self.dest_port)
+        
+        # Interface tab
+        interface_tab = QWidget()
+        interface_layout = QFormLayout(interface_tab)
+        
+        # Incoming interface
+        self.in_interface = QLineEdit(self.rule.get('in_interface', ''))
+        interface_layout.addRow(self.translations.get('in_interface', 'Incoming Interface:'), self.in_interface)
+        
+        # Outgoing interface
+        self.out_interface = QLineEdit(self.rule.get('out_interface', ''))
+        interface_layout.addRow(self.translations.get('out_interface', 'Outgoing Interface:'), self.out_interface)
+        
+        # Advanced tab
+        advanced_tab = QWidget()
+        advanced_layout = QFormLayout(advanced_tab)
+        
+        # Logging
+        self.log_check = QCheckBox(self.translations.get('log', 'Log this rule'))
+        self.log_check.setChecked(self.rule.get('log', False))
+        advanced_layout.addRow('', self.log_check)
+        
+        # Log prefix
+        self.log_prefix = QLineEdit(self.rule.get('log_prefix', 'FIREWALL'))
+        advanced_layout.addRow(self.translations.get('log_prefix', 'Log Prefix:'), self.log_prefix)
+        
+        # Time constraints
+        self.time_start = QLineEdit(self.rule.get('time_start', ''))
+        advanced_layout.addRow(self.translations.get('time_start', 'Active from (HH:MM):'), self.time_start)
+        
+        self.time_end = QLineEdit(self.rule.get('time_end', ''))
+        advanced_layout.addRow(self.translations.get('time_end', 'Active until (HH:MM):'), self.time_end)
+        
+        # Days of week
+        self.days_of_week = QLineEdit(self.rule.get('days_of_week', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun'))
+        advanced_layout.addRow(self.translations.get('days_of_week', 'Active on days:'), self.days_of_week)
+        
+        # Description
+        self.desc_edit = QTextEdit(self.rule.get('description', ''))
+        self.desc_edit.setMaximumHeight(100)
+        advanced_layout.addRow(self.translations.get('description', 'Description:'), self.desc_edit)
+        
+        # Add tabs to the tab widget
+        tabs.addTab(basic_tab, self.translations.get('basic', 'Basic'))
+        tabs.addTab(protocol_tab, self.translations.get('protocol', 'Protocol'))
+        tabs.addTab(interface_tab, self.translations.get('interface', 'Interface'))
+        tabs.addTab(advanced_tab, self.translations.get('advanced', 'Advanced'))
+        
+        layout.addWidget(tabs)
+        
+        # Buttons
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel,
+            Qt.Orientation.Horizontal, self
+        )
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+    
     def get_rule(self):
         """Get the rule data from the dialog"""
         return {
-            'name': self.name_input.text().strip(),
-            'description': self.description_input.text().strip(),
-            'protocol': self.protocol_combo.currentText(),
-            'port': self.port_input.text().strip(),
-            'direction': self.direction_combo.currentText(),
+            'id': self.rule.get('id', str(uuid.uuid4())),
+            'name': self.name_edit.text(),
+            'enabled': self.enabled_check.isChecked(),
             'action': self.action_combo.currentText(),
-            'enabled': self.enabled_cb.isChecked()
+            'direction': self.direction_combo.currentText(),
+            'protocol': self.protocol_combo.currentText(),
+            'source_ip': self.source_ip.text(),
+            'source_port': self.source_port.text(),
+            'dest_ip': self.dest_ip.text(),
+            'dest_port': self.dest_port.text(),
+            'in_interface': self.in_interface.text(),
+            'out_interface': self.out_interface.text(),
+            'log': self.log_check.isChecked(),
+            'log_prefix': self.log_prefix.text(),
+            'time_start': self.time_start.text(),
+            'time_end': self.time_end.text(),
+            'days_of_week': self.days_of_week.text(),
+            'description': self.desc_edit.toPlainText(),
+            'created_at': self.rule.get('created_at', datetime.now().isoformat()),
+            'updated_at': datetime.now().isoformat()
         }
+
 
 class FirewallManager:
     """

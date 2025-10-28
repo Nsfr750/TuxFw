@@ -276,18 +276,22 @@ class ViewLogsWindow(QWidget):
         search_layout.addLayout(nav_layout, 0)
         search_group.setLayout(search_layout)
         
-        # Log level filter
-        level_group = QGroupBox(translations[self.current_language].get('log_levels', 'Log Levels'))
+        # Log level filter - Using dropdown menu instead of checkboxes
+        level_group = QGroupBox(translations[self.current_language].get('log_levels', 'Log Level'))
         level_layout = QHBoxLayout()
         
-        self.level_buttons = {}
-        for level in ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']:
-            btn = QCheckBox(level)
-            btn.setChecked(True)
-            btn.stateChanged.connect(self.filter_log_levels)
-            self.level_buttons[level] = btn
-            level_layout.addWidget(btn)
+        # Create the dropdown menu for log levels
+        self.level_combo = QComboBox()
+        self.level_combo.addItem(translations[self.current_language].get('all_levels', 'All Levels'), 'ALL')
+        self.level_combo.addItem('DEBUG', 'DEBUG')
+        self.level_combo.addItem('INFO', 'INFO')
+        self.level_combo.addItem('WARNING', 'WARNING')
+        self.level_combo.addItem('ERROR', 'ERROR')
+        self.level_combo.addItem('CRITICAL', 'CRITICAL')
+        self.level_combo.currentIndexChanged.connect(self.filter_log_levels)
         
+        level_layout.addWidget(QLabel(translations[self.current_language].get('filter_by_level', 'Filter by level:')), 0)
+        level_layout.addWidget(self.level_combo, 1)
         level_layout.addStretch()
         level_group.setLayout(level_layout)
         
@@ -442,11 +446,11 @@ class ViewLogsWindow(QWidget):
             return
             
         cursor = self.log_text.textCursor()
-        cursor.movePosition(cursor.Start)
+        cursor.movePosition(cursor.MoveOperation.Start)
         cursor.beginEditBlock()
         
         # Clear existing formatting
-        cursor.select(cursor.Document)
+        cursor.select(cursor.SelectionType.Document)
         cursor.setCharFormat(QTextCharFormat())
         cursor.clearSelection()
         
@@ -462,7 +466,7 @@ class ViewLogsWindow(QWidget):
     def highlight_text(self, pattern, text_format):
         """Highlight text matching the given pattern"""
         cursor = self.log_text.textCursor()
-        cursor.movePosition(cursor.Start)
+        cursor.movePosition(cursor.MoveOperation.Start)
         
         # Create a regex pattern
         flags = 0 if self.case_sensitive_cb.isChecked() else re.IGNORECASE
@@ -507,7 +511,7 @@ class ViewLogsWindow(QWidget):
             # Find all matches
             self.search_matches = []
             cursor = self.log_text.textCursor()
-            cursor.movePosition(cursor.Start)
+            cursor.movePosition(cursor.MoveOperation.Start)
             
             while True:
                 cursor = self.log_text.document().find(search_text, cursor, flags)
@@ -604,10 +608,65 @@ class ViewLogsWindow(QWidget):
             self.load_log_file(self.current_log_file)
     
     def filter_log_levels(self):
-        """Filter log messages by log level"""
-        # This is a placeholder for log level filtering
-        # Implementation would depend on how log levels are formatted in the log file
-        pass
+        """Filter log messages by log level using the dropdown selection"""
+        if not hasattr(self, 'log_text') or not hasattr(self, 'level_combo'):
+            return
+            
+        # Get the currently selected log level
+        selected_level = self.level_combo.currentData()
+        
+        # Get the document and cursor
+        document = self.log_text.document()
+        cursor = self.log_text.textCursor()
+        
+        # Start edit block for batch operations
+        cursor.beginEditBlock()
+        
+        try:
+            # First, show all text
+            cursor.movePosition(cursor.MoveOperation.Start)
+            cursor.movePosition(cursor.MoveOperation.End, cursor.MoveMode.KeepAnchor)
+            
+            # Reset formatting
+            char_format = QTextCharFormat()
+            char_format.setProperty(QTextCharFormat.Property.FullWidthSelection, False)
+            cursor.setCharFormat(char_format)
+            cursor.clearSelection()
+            
+            # If 'All Levels' is selected, just reapply highlighting
+            if selected_level == 'ALL':
+                self.highlight_log_levels()
+                return
+                
+            # For specific log level filtering
+            block = document.firstBlock()
+            while block.isValid():
+                text = block.text()
+                cursor.setPosition(block.position())
+                cursor.movePosition(cursor.MoveOperation.Right, cursor.MoveMode.KeepAnchor, len(text))
+                
+                # Check if this line contains the selected log level
+                if selected_level in text.split():
+                    # Show lines with the selected log level
+                    cursor.setCharFormat(QTextCharFormat())
+                else:
+                    # Hide other lines by making text transparent
+                    hidden_format = QTextCharFormat()
+                    hidden_format.setForeground(QColor('transparent'))
+                    cursor.setCharFormat(hidden_format)
+                    
+                block = block.next()
+                
+            # Reapply highlighting to visible text
+            self.highlight_log_levels()
+            
+        except Exception as e:
+            self.logger.log_error(f"Error in filter_log_levels: {str(e)}", "ViewLogs.filter_log_levels")
+            
+        finally:
+            # End edit block and ensure cursor is visible
+            cursor.endEditBlock()
+            self.log_text.setTextCursor(cursor)
     
     def clear_current_log(self):
         """Clear the current log file"""

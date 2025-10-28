@@ -1,30 +1,44 @@
 import json
+import logging
 import os
 from typing import Dict, Any
 
 class LanguageManager:
     def __init__(self, lang_dir: str = 'lang'):
         self.lang_dir = lang_dir
-        self.translations: Dict[str, Dict[str, str]] = {}
+        self.translations: Dict[str, Dict[str, Any]] = {}
         self.current_lang = 'en'
+        self.logger = logging.getLogger(__name__)
         self._load_translations()
     
     def _load_translations(self):
         try:
-            from . import translations
-            self.translations = translations.translations
-        except ImportError:
-            # Fallback to default translations if module import fails
+            # Import the translations dictionary directly
+            from firewall.lang.translations import translations
+            self.translations = translations
+        except (ImportError, AttributeError) as e:
+            # Fallback to default translations if import fails
             self.translations = {
                 'en': {
                     'error': 'Error loading translations',
                     'window_title': 'Firewall Manager',
+                    'common': {
+                        'close': 'Close',
+                        'save': 'Save',
+                        'cancel': 'Cancel'
+                    }
                 },
                 'it': {
                     'error': 'Errore nel caricamento delle traduzioni',
                     'window_title': 'Gestore Firewall',
+                    'common': {
+                        'close': 'Chiudi',
+                        'save': 'Salva',
+                        'cancel': 'Annulla'
+                    }
                 }
             }
+            self.logger.warning(f'Using fallback translations: {str(e)}')
     
     def set_language(self, lang_code: str) -> bool:
         """Set the current language."""

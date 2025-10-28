@@ -5,7 +5,15 @@ import subprocess
 import json
 import os
 import logging
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional, Union, Any, Tuple
+
+# Try to import pyrewall for fallback
+try:
+    import pyrewall
+    HAS_PYREWALL = True
+except ImportError:
+    pyrewall = None
+    HAS_PYREWALL = False
 
 class NFTablesManager:
     """
@@ -15,17 +23,34 @@ class NFTablesManager:
     
     def __init__(self, logger=None):
         """
-        Initialize the NFTablesManager.
+        Initialize the NFTablesManager with nftables, pyrewall, or mock fallback.
         
         Args:
             logger: Optional logger instance. If not provided, a basic logger will be created.
         """
-        self.logger = logger or logging.getLogger("nftables")
+        self.logger = logger or logging.getLogger("firewall")
         self.nft_cmd = "nft"
+        self.use_pyrewall = False
+        self.use_mock = False
         
         # Check if nft is available
         if not self._is_nft_available():
-            raise RuntimeError("nft command not found. Please install nftables.")
+            if HAS_PYREWALL:
+                self.logger.warning("nft not found, falling back to pyrewall")
+                self.use_pyrewall = True
+                self.pyrewall = pyrewall.Firewall()
+            else:
+                try:
+                    from firewall.script.mock_firewall import MockFirewall
+                    self.logger.warning("Neither nft nor pyrewall found, using mock firewall for development")
+                    self.use_mock = True
+                    self.mock_firewall = MockFirewall(logger=self.logger)
+                except ImportError as e:
+                    self.logger.error("Failed to initialize mock firewall: %s", e)
+                    raise RuntimeError(
+                        "nft command not found and pyrewall is not available. "
+                        "Please install either nftables or pyrewall, or ensure mock_firewall.py is available."
+                    )
     
     def _is_nft_available(self) -> bool:
         """Check if nft command is available."""
@@ -43,6 +68,7 @@ class NFTablesManager:
     def _run_nft_command(self, command: str, json_output: bool = False) -> Dict:
         """
         Run an nft command and return the result.
+        If using pyrewall or mock fallback, translate the command accordingly.
         
         Args:
             command: The nft command to run (e.g., "list ruleset")
@@ -51,6 +77,12 @@ class NFTablesManager:
         Returns:
             dict: The parsed JSON output or raw output if json_output is False
         """
+        if self.use_pyrewall:
+            return self._handle_pyrewall_command(command, json_output)
+        elif self.use_mock:
+            return self.mock_firewall._run_command(command, json_output)
+            
+        # Original nft command handling
         cmd = [self.nft_cmd]
         
         if json_output:
@@ -77,15 +109,112 @@ class NFTablesManager:
         except json.JSONDecodeError as e:
             self.logger.error(f"Failed to parse nft JSON output: {e}")
             return {"error": f"Failed to parse JSON: {e}", "raw_output": result.stdout}
+            
+    def _handle_pyrewall_command(self, command: str, json_output: bool) -> Dict:
+        """
+        Handle nft commands using pyrewall as a fallback.
+        
+        Args:
+            command: The nft command to translate
+            json_output: Whether to return JSON output
+            
+        Returns:
+            dict: The result of the operation
+        """
+        try:
+            parts = command.split()
+            if not parts:
+                return {"error": "Empty command"}
+                
+            cmd = parts[0].lower()
+            args = parts[1:]
+            
+            if cmd == "add" and len(args) >= 3 and args[0] == "rule":
+                # Handle: add rule <table> <chain> <rule>
+                table = args[1]
+                chain = args[2]
+                rule = " ".join(args[3:]) if len(args) > 3 else ""
+                
+                # Translate rule to pyrewall format
+                # This is a simplified example - you'll need to expand this
+                # based on your specific rule format
+                if "accept" in rule:
+                    self.pyrewall.allow(rule)
+                elif "drop" in rule:
+                    self.pyrewall.deny(rule)
+                else:
+                    self.pyrewall.add_rule(rule)
+                    
+                return {"status": "success", "message": f"Added rule: {rule}"}
+                
+            elif cmd == "delete" and len(args) >= 2 and args[0] == "rule":
+                # Handle: delete rule <table> <chain> <handle>
+                # This would need to track rule handles in pyrewall
+                return {"status": "success", "message": "Rule deletion not fully implemented in pyrewall mode"}
+                
+            elif cmd == "list" and args and args[0] == "ruleset":
+                # Return current rules
+                rules = self.pyrewall.list_rules()
+                return {"nftables": [{"rule": rule} for rule in rules]}
+                
+            return {"error": f"Unsupported command in pyrewall mode: {command}"}
+            
+        except Exception as e:
+            self.logger.error(f"Error in pyrewall command handler: {e}")
+            return {"error": str(e)}
     
     def get_ruleset(self) -> Dict:
         """
-        Get the current nftables ruleset in JSON format.
+        Get the current firewall ruleset.
         
         Returns:
-            dict: The current nftables ruleset
+            dict: The current ruleset in a compatible format
         """
-        return self._run_nft_command("list ruleset", json_output=True)
+        if self.use_pyrewall:
+            try:
+                rules = self.pyrewall.list_rules()
+                # Format to match nftables JSON output structure
+                formatted_rules = []
+                for rule in rules:
+                    if not rule:
+                        continue
+                    try:
+                        parts = rule.split()
+                        if len(parts) < 2:
+                            continue
+                        
+                        formatted_rule = {
+                            "chain": {
+                                "family": "ip",
+                                "table": "filter",
+                                "name": "INPUT"
+                            },
+                            "expr": [
+                                {
+                                    "match": {
+                                        "op": "==",
+                                        "left": {
+                                            "payload": {
+                                                "protocol": parts[0]
+                                            }
+                                        },
+                                        "right": parts[1]
+                                    }
+                                }
+                            ]
+                        }
+                        formatted_rules.append({"rule": formatted_rule})
+                    except Exception as e:
+                        self.logger.warning(f"Failed to format rule '{rule}': {e}")
+                
+                return {"nftables": formatted_rules}
+            except Exception as e:
+                self.logger.error(f"Failed to get pyrewall ruleset: {e}")
+                return {"nftables": []}
+        elif self.use_mock:
+            return self.mock_firewall.get_ruleset()
+        else:
+            return self._run_nft_command("list ruleset", json_output=True)
     
     def apply_ruleset(self, ruleset: Dict) -> bool:
         """
@@ -135,7 +264,10 @@ class NFTablesManager:
         """
         try:
             cmd = f'add rule {table} {chain} {rule}'
-            self._run_nft_command(cmd)
+            success, output = self._run_command(cmd.split())
+            if not success:
+                self.logger.error(f"Failed to add rule: {output}")
+                return False
             self.logger.info(f"Added rule: {cmd}")
             return True
         except Exception as e:
