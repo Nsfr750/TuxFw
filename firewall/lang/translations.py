@@ -1,6 +1,6 @@
 translations = {
     'en': {
-        'app_title': 'Python Firewall Manager',
+        'app_title': 'TuxFw - Firewall Manager',
         'language': 'Language',
         'tab_status': 'Status',
         'tab_rules': 'Rules',
@@ -282,7 +282,7 @@ translations = {
         }
     },
     'it': {
-        'app_title': 'Gestore Firewall Python',
+        'app_title': 'TuxFw - Firewall Manager',
         'language': 'Lingua',
         'tab_status': 'Stato',
         'tab_rules': 'Regole',

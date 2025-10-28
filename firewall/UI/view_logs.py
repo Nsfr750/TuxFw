@@ -30,6 +30,16 @@ class ViewLogsWindow(QWidget):
         self.highlight_formats = {}
         self.search_matches = []
         self.current_match = -1
+        
+        # Initialize highlight formats for log levels
+        self.highlight_formats = {
+            'DEBUG': self.create_text_format('#888888'),
+            'INFO': self.create_text_format('#4CAF50'),
+            'WARNING': self.create_text_format('#FFC107'),
+            'ERROR': self.create_text_format('#F44336', bold=True),
+            'CRITICAL': self.create_text_format('#FF4081', bold=True),
+            'SEARCH': self.create_text_format('#000000', '#FFFF00')
+        }
 
         self.setWindowTitle(f"{translations[self.current_language].get('logs', 'Logs')} - TuxFw")
         self.setMinimumSize(1000, 700)
@@ -397,16 +407,21 @@ class ViewLogsWindow(QWidget):
     
     def highlight_log_levels(self):
         """Apply syntax highlighting to log levels"""
-        if not hasattr(self, 'log_text') or not self.log_text.toPlainText():
+        if not hasattr(self, 'log_text') or not hasattr(self, 'highlight_formats') or not self.log_text.toPlainText():
             return
-            
+        
+        # Get the current cursor position and scroll position
         cursor = self.log_text.textCursor()
-        cursor.movePosition(cursor.MoveOperation.Start)
+        scroll_bar = self.log_text.verticalScrollBar()
+        scroll_pos = scroll_bar.value()
+        cursor_pos = cursor.position()
+        
         cursor.beginEditBlock()
         
         try:
-            # Clear existing formatting
-            cursor.select(cursor.SelectionType.Document)
+            # First, clear all formatting
+            cursor.movePosition(cursor.MoveOperation.Start)
+            cursor.movePosition(cursor.MoveOperation.End, cursor.MoveMode.KeepAnchor)
             cursor.setCharFormat(QTextCharFormat())
             cursor.clearSelection()
             
@@ -414,13 +429,25 @@ class ViewLogsWindow(QWidget):
             for level, fmt in self.highlight_formats.items():
                 if level == 'SEARCH':
                     continue  # Skip search highlights
-                self.highlight_text(fr'\b{level}\b', fmt)
+                    
+                # Create a pattern that matches the log level at the start of the line
+                # after a timestamp or at the very beginning of the line
+                pattern = fr'(^|\[|\s)({re.escape(level)})(\s|:|\])'
+                self.highlight_text(pattern, fmt)
                 
         except Exception as e:
-            self.logger.log_error(f"Error in highlight_log_levels: {str(e)}", "ViewLogs.highlight_log_levels")
+            error_msg = f"Error in highlight_log_levels: {str(e)}"
+            self.logger.log_error(error_msg, "ViewLogs.highlight_log_levels")
+            QMessageBox.warning(self, "Highlight Error", f"Error applying syntax highlighting: {str(e)}")
             
         finally:
             cursor.endEditBlock()
+            
+            # Restore cursor position and scroll position
+            if cursor_pos <= len(self.log_text.toPlainText()):
+                cursor.setPosition(cursor_pos)
+                self.log_text.setTextCursor(cursor)
+            scroll_bar.setValue(scroll_pos)
     
     def highlight_text(self, pattern, text_format):
         """Highlight text matching the given pattern"""
@@ -568,31 +595,41 @@ class ViewLogsWindow(QWidget):
     
     def filter_log_levels(self):
         """Filter log messages by log level using the dropdown selection"""
-        if not hasattr(self, 'log_text') or not hasattr(self, 'level_combo'):
+        if not hasattr(self, 'log_text') or not hasattr(self, 'level_combo') or not hasattr(self, 'highlight_formats'):
             return
             
         # Get the currently selected log level
         selected_level = self.level_combo.currentData()
-        
-        # Get the document and cursor
-        document = self.log_text.document()
+        if not selected_level:
+            return
+            
+        # Save scroll position and cursor
+        scroll_bar = self.log_text.verticalScrollBar()
+        scroll_pos = scroll_bar.value() if scroll_bar else 0
         cursor = self.log_text.textCursor()
+        cursor_pos = cursor.position()
+        
+        # Get the document
+        document = self.log_text.document()
+        if not document:
+            return
         
         # Start edit block for batch operations
         cursor.beginEditBlock()
         
         try:
-            # First, show all text
+            # First, reset all text to visible
             cursor.movePosition(cursor.MoveOperation.Start)
             cursor.movePosition(cursor.MoveOperation.End, cursor.MoveMode.KeepAnchor)
             
             # Reset formatting
             char_format = QTextCharFormat()
             char_format.setProperty(QTextCharFormat.Property.FullWidthSelection, False)
+            char_format.setForeground(Qt.GlobalColor.black)  # Default text color
             cursor.setCharFormat(char_format)
             cursor.clearSelection()
             
-            # If 'All Levels' is selected, just reapply highlighting
+            # If 'All Levels' is selected, just reapply highlighting and return
             if selected_level == 'ALL':
                 self.highlight_log_levels()
                 return
@@ -604,35 +641,56 @@ class ViewLogsWindow(QWidget):
                 cursor.setPosition(block.position())
                 cursor.movePosition(cursor.MoveOperation.Right, cursor.MoveMode.KeepAnchor, len(text))
                 
-                # Check if this line contains the selected log level (case-insensitive)
-                text_upper = text.upper()
-                if selected_level.upper() in text_upper:
-                    # Show lines with the selected log level
-                    cursor.setCharFormat(QTextCharFormat())
-                else:
-                    # Hide other lines by making text transparent
+                # Check if this line contains the selected log level
+                # Look for the log level at the start of the line or after a timestamp
+                log_level_found = False
+                
+                # Check for log level at the start of the line (after any whitespace)
+                log_level_pattern = r'^\s*(DEBUG|INFO|WARNING|ERROR|CRITICAL)\b'
+                match = re.search(log_level_pattern, text, re.IGNORECASE)
+                
+                if match:
+                    log_level = match.group(1).upper()
+                    log_level_found = (log_level == selected_level.upper())
+                
+                # If log level not found at the start, check anywhere in the line (as fallback)
+                if not log_level_found:
+                    log_level_found = (selected_level.upper() in text.upper())
+                
+                # Apply formatting based on whether the log level matches
+                if not log_level_found:
+                    # Hide lines that don't match the selected level
                     hidden_format = QTextCharFormat()
                     hidden_format.setForeground(QColor('transparent'))
-                    cursor.setCharFormat(hidden_format)
-                    
+                    cursor.mergeCharFormat(hidden_format)
+                
                 block = block.next()
                 
             # Reapply highlighting to visible text
             self.highlight_log_levels()
             
         except Exception as e:
-            self.logger.log_error(f"Error in filter_log_levels: {str(e)}", "ViewLogs.filter_log_levels")
-            # Show error to user
-            QMessageBox.warning(
-                self,
-                translations[self.current_language].get('error', 'Error'),
-                f"Error applying filter: {str(e)}"
-            )
+            error_msg = f"Error in filter_log_levels: {str(e)}"
+            self.logger.log_error(error_msg, "ViewLogs.filter_log_levels")
+            if hasattr(self, 'status_label'):
+                self.status_label.setText(error_msg)
             
         finally:
-            # End edit block and ensure cursor is visible
-            cursor.endEditBlock()
-            self.log_text.setTextCursor(cursor)
+            try:
+                # End edit block
+                cursor.endEditBlock()
+                
+                # Restore cursor position if possible
+                if cursor_pos <= len(self.log_text.toPlainText()):
+                    cursor.setPosition(cursor_pos)
+                    self.log_text.setTextCursor(cursor)
+                
+                # Restore scroll position
+                if scroll_bar:
+                    scroll_bar.setValue(min(scroll_pos, scroll_bar.maximum()))
+                    
+            except Exception as e:
+                self.logger.log_error(f"Error in filter_log_levels (cleanup): {str(e)}", "ViewLogs.filter_log_levels")
     
     def clear_current_log(self):
         """Clear the current log file"""
@@ -735,42 +793,57 @@ class ViewLogsWindow(QWidget):
                 return
 
             log_file = current_data
+            self.current_log_file = log_file  # Ensure current_log_file is set
+            
             if os.path.exists(log_file):
-                with open(log_file, 'r', encoding='utf-8') as f:
+                # Disable updates while loading for better performance
+                self.log_text.setUpdatesEnabled(False)
+                
+                # Save scroll position
+                scroll_bar = self.log_text.verticalScrollBar()
+                scroll_pos = scroll_bar.value()
+                
+                # Save cursor position
+                cursor = self.log_text.textCursor()
+                cursor_pos = cursor.position()
+                
+                # Read file content
+                with open(log_file, 'r', encoding='utf-8', errors='replace') as f:
                     content = f.read()
-
+                
+                # Update text
                 self.log_text.setPlainText(content)
-                self.status_label.setText(f"Loaded: {os.path.basename(log_file)} ({len(content)} chars)")
+                
+                # Apply highlighting first
+                self.highlight_log_levels()
+                
+                # Then apply filters
+                self.filter_log_levels()
+                
+                # Restore cursor and scroll position if possible
+                if cursor_pos < len(content):
+                    cursor.setPosition(min(cursor_pos, len(content)))
+                    self.log_text.setTextCursor(cursor)
+                
+                # Re-enable updates
+                self.log_text.setUpdatesEnabled(True)
+                
+                # Force update the display
+                self.log_text.viewport().update()
+                
+                # Restore scroll position after a short delay
+                QTimer.singleShot(50, lambda: scroll_bar.setValue(min(scroll_pos, scroll_bar.maximum())))
+                
+                # Update status
+                visible_lines = sum(1 for line in content.splitlines() if line.strip())
+                self.status_label.setText(
+                    f"{translations[self.current_language].get('loaded', 'Loaded')}: "
+                    f"{os.path.basename(log_file)} ({visible_lines} {translations[self.current_language].get('lines', 'lines')})"
+                )
+                
             else:
                 self.log_text.clear()
-                self.status_label.setText("Log file not found")
-
-        except Exception as e:
-            self.log_text.clear()
-            self.status_label.setText(f"Error loading log: {str(e)}")
-            self.logger.log_error(f"Failed to load log file {log_file}: {e}", context="ViewLogs.load_selected_log")
-
-    def clear_current_log(self):
-        """Clear the currently selected log file"""
-        try:
-            current_data = self.log_combo.currentData()
-            if not current_data:
-                QMessageBox.warning(self, translations[self.current_language]['warning'] or 'Warning',
-                                  "No log file selected")
-                return
-
-            reply = QMessageBox.question(self, translations[self.current_language]['confirm'] or 'Confirm',
-                                       f"Clear the selected log file? This cannot be undone.",
-                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-
-            if reply == QMessageBox.StandardButton.Yes:
-                log_file = current_data
-                with open(log_file, 'w', encoding='utf-8') as f:
-                    f.write("")  # Clear the file
-
-                self.load_selected_log()
-                self.status_label.setText("Log file cleared")
-                self.logger.log_firewall_event("LOG_CLEARED", f"Log file cleared: {os.path.basename(log_file)}")
+                self.status_label.setText(translations[self.current_language].get('log_not_found', 'Log file not found'))
 
         except Exception as e:
             self.status_label.setText(f"Error clearing log: {str(e)}")
