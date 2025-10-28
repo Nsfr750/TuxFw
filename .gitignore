@@ -182,3 +182,4 @@ cython_debug/
 
 # Mixed
 TXT
+/tests
