@@ -1022,6 +1022,21 @@ class FirewallManager:
         try:
             if hasattr(self, 'signals'):
                 self.signals.vpn_status_changed.emit(status)
+
+            # Apply include-mode routes after VPN connects
+            try:
+                # status can be {name: status_dict} or a plain dict
+                if isinstance(status, dict) and len(status) == 1 and next(iter(status.values()), None) and next(iter(status.keys()), None):
+                    name = next(iter(status.keys()))
+                    sdict = status[name]
+                    if isinstance(sdict, dict) and sdict.get('connected'):
+                        self._apply_include_routes_if_needed(name, sdict)
+                elif isinstance(status, dict) and status.get('connected'):
+                    # If we don't know the name, try to apply for all VPNs with include mode
+                    for name in self.get_vpn_list():
+                        self._apply_include_routes_if_needed(name, status)
+            except Exception as e:
+                self.logger.error(f"Error applying include routes on VPN connect: {e}")
         except Exception as e:
             self.logger.error(f"Error emitting VPN status: {e}")
 
@@ -1076,8 +1091,27 @@ class FirewallManager:
                         self.winfw.apply_split_tunneling_exclude(routes)
                     else:
                         self.winfw.apply_split_tunneling_include(routes)
+                        # Also apply include-mode routes (best-effort) if VPN interface is known/connected
+                        try:
+                            vstatus = self.get_vpn_status(name)
+                            sdict = vstatus.get(name) if isinstance(vstatus, dict) and name in vstatus else vstatus
+                            if isinstance(sdict, dict):
+                                self._apply_include_routes_if_needed(name, sdict)
+                        except Exception as e:
+                            self.logger.error(f"Include routes apply error: {e}")
                 else:
                     self.winfw.clear_split_tunneling()
+                    # Attempt to clear previously added routes if we can resolve alias
+                    try:
+                        vstatus = self.get_vpn_status(name)
+                        sdict = vstatus.get(name) if isinstance(vstatus, dict) and name in vstatus else vstatus
+                        alias = None
+                        if isinstance(sdict, dict):
+                            alias = sdict.get('interface') or (sdict.get('config', {}) if isinstance(sdict.get('config'), dict) else {}).get('interface')
+                        if alias:
+                            self.winfw.clear_routes_for_interface(alias)
+                    except Exception:
+                        pass
             return ok
         except Exception as e:
             self.logger.error(f"Set split tunneling failed for {name}: {e}")
@@ -1113,6 +1147,29 @@ class FirewallManager:
                     self.set_split_tunneling(name, mode, routes)
         except Exception as e:
             self.logger.error(f"Error in applying saved split tunneling: {e}")
+
+    def _apply_include_routes_if_needed(self, name: str, status: dict):
+        """If VPN has include-mode split tunneling configured, apply routes using Windows helpers."""
+        try:
+            if not self.winfw:
+                return
+            cfg = self.get_split_tunneling(name)
+            if not isinstance(cfg, dict):
+                return
+            if (cfg.get('mode') or '').lower() != 'include':
+                return
+            routes = cfg.get('routes') or []
+            if not routes:
+                return
+            # Determine interface alias from status or config
+            alias = status.get('interface') if isinstance(status, dict) else None
+            if not alias and isinstance(status, dict):
+                c = status.get('config') if isinstance(status.get('config'), dict) else {}
+                alias = c.get('interface')
+            if alias:
+                self.winfw.apply_routes_include(alias, routes)
+        except Exception as e:
+            self.logger.error(f"Failed to apply include routes for {name}: {e}")
     
     def _load_rules(self):
         """Load rules from the configuration"""

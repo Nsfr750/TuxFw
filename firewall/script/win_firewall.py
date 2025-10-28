@@ -99,6 +99,46 @@ class WindowsFirewallController:
             ok_all = self._run_ps(cmd) and ok_all
         return ok_all
 
+    # ---- Route management (best-effort) ----
+    def _get_interface_index(self, alias: str) -> int | None:
+        cmd = (
+            f"$if=(Get-NetIPInterface -InterfaceAlias '{alias}' -ErrorAction SilentlyContinue);"
+            f"if($if){{$if.ifIndex}}"
+        )
+        if not self.is_windows:
+            return None
+        try:
+            completed = subprocess.run(["powershell","-NoProfile","-NonInteractive","-Command", cmd], capture_output=True, text=True)
+            if completed.returncode == 0 and completed.stdout.strip().isdigit():
+                return int(completed.stdout.strip())
+        except Exception:
+            pass
+        return None
+
+    def clear_routes_for_interface(self, alias: str) -> bool:
+        """Remove routes for a given interface alias that were likely added for split tunneling."""
+        cmd = (
+            f"Get-NetRoute -InterfaceAlias '{alias}' -ErrorAction SilentlyContinue | "
+            f"Where-Object {{$_.RouteMetric -le 10}} | Remove-NetRoute -Confirm:$false"
+        )
+        return self._run_ps(cmd)
+
+    def apply_routes_include(self, alias: str, cidrs: List[str]) -> bool:
+        """Add routes for include-mode split tunneling bound to a specific interface alias."""
+        if not cidrs:
+            return True
+        # First clear previously added low-metric routes
+        self.clear_routes_for_interface(alias)
+        ok_all = True
+        for cidr in cidrs:
+            # Best-effort: add route via interface alias with low metric
+            cmd = (
+                f"New-NetRoute -DestinationPrefix '{cidr}' -InterfaceAlias '{alias}' "
+                f"-PolicyStore ActiveStore -RouteMetric 5 -ErrorAction SilentlyContinue"
+            )
+            ok_all = self._run_ps(cmd) and ok_all
+        return ok_all
+
     def clear_split_tunneling(self) -> bool:
         return self._run_ps(
             f"Get-NetFirewallRule -DisplayGroup '{self.GROUP}' | Where-Object {{$_.DisplayName -like 'TuxFw_Split_*'}} | Remove-NetFirewallRule -Confirm:$false"

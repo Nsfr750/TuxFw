@@ -422,6 +422,8 @@ class MonitoringTab(QWidget):
             self.firewall.signals.connection_detected.connect(self.add_connection)
             self.firewall.signals.intrusion_detected.connect(self.add_alert)
             self.firewall.signals.vpn_status_changed.connect(self.update_vpn_status)
+            if hasattr(self.firewall.signals, 'vpn_log_line'):
+                self.firewall.signals.vpn_log_line.connect(self.vpn_log.append)
         
         # Connect UI controls
         self.refresh_btn.clicked.connect(self.refresh_connections)

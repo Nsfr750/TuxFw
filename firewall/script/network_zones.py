@@ -555,6 +555,25 @@ class VPNManager:
                 cb(payload)
             except Exception as e:
                 self.logger.error(f"VPN log callback error: {e}")
+        # Heuristic parsing for OpenVPN status transitions
+        try:
+            lname = name
+            client = self.vpn_clients.get(lname)
+            if not client:
+                return
+            text = (line or "").strip()
+            # Detect successful initialization
+            if "Initialization Sequence Completed" in text:
+                if not getattr(client, 'connected', False):
+                    client.connected = True
+                    self._emit_status(lname)
+            # Detect auth failures or exits
+            if "AUTH_FAILED" in text or "auth-failure" in text.lower() or "Exiting" in text:
+                if getattr(client, 'connected', False):
+                    client.connected = False
+                    self._emit_status(lname)
+        except Exception:
+            pass
 
     # ---- Kill switch (logical state; nftables handled by FirewallManager) ----
     def enable_kill_switch(self, name: str) -> bool:
