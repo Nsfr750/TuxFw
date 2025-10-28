@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [0.1.0] - 2025-10-28
 
 ### Added
+
 - Monitoring tab with real-time bandwidth charts (QtCharts), connections view, and security alerts
 - Enhanced Security: rate limiting, GeoIP blocking, IP reputation feeds, port knocking
 - VPN integration: OpenVPN (process backend with log streaming) and WireGuard (service/exec)
@@ -13,15 +14,18 @@ All notable changes to this project will be documented in this file.
 - Help updated (EN/IT) with Monitoring, Security, VPN and advanced features
 
 ### Changed
+
 - UI improvements across Monitoring and VPN tabs
 - Zone VPN config supports persisted split tunneling
 
 ### Fixed
+
 - Network monitor stats mapping and stability during startup
 
 ## [0.0.1] - 2025-10-28
 
 ### Added
+
 - Initial project setup and structure
 - Basic firewall management interface with PySide6
 - Support for English and Italian languages
@@ -34,6 +38,7 @@ All notable changes to this project will be documented in this file.
 - Mock firewall for development and testing
 
 ### Changed
+
 - Improved UI/UX with better organization and feedback
 - Enhanced tabbed interface with consistent theming
 - Optimized file handling and error reporting
@@ -41,12 +46,15 @@ All notable changes to this project will be documented in this file.
 - Improved cross-platform compatibility
 
 ### Fixed
+
 - Fixed UI initialization issues
 - Resolved QR code generation with dark theme support
 - Addressed various UI layout and styling issues
 - Fixed logger parameter passing in ViewLogsWindow
 - Resolved indentation and syntax issues in view_logs.py
 - Fixed exception handling in file loading operations
+
 ### Removed
+
 - Unused imports and redundant code
 - Deprecated functions and variables

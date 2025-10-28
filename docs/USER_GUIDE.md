@@ -33,17 +33,18 @@
 
 ## Introduction
 
-TuxFw is a user-friendly firewall management tool for Linux systems. This guide provides detailed instructions on how to install, configure, and use TuxFw to manage your system's firewall rules and monitor network activity.
+TuxFw is a user-friendly firewall management tool for Windows, Linux, and macOS. This guide explains how to install, configure, and use TuxFw to manage firewall rules, monitor network activity, and configure VPN and advanced security features.
 
 ## Installation
 
 ### System Requirements
-- Linux-based operating system
+
+- Windows/Linux/macOS
 - Python 3.8 or higher
-- Root/sudo privileges
-- nftables or iptables installed
-- 100MB free disk space
-- 512MB RAM minimum (1GB recommended)
+- Administrative privileges for firewall/VPN enforcement (Windows)
+- nftables/iptables (Linux) if applying system rules
+- Optional: OpenVPN, WireGuard (for VPN)
+- Optional: GeoLite2-Country.mmdb (GeoIP)
 
 ### Installation Steps
 
@@ -73,12 +74,14 @@ When you first launch TuxFw, you'll be presented with the main interface. The ap
 
 ### Main Window
 
-The main window is divided into several sections:
+Key tabs:
 
-1. **Toolbar**: Quick access to common actions
-2. **Rules List**: Displays all configured firewall rules
-3. **Status Bar**: Shows current firewall status and connection information
-4. **Log Panel**: Displays system and firewall logs
+1. **Status**: Firewall status and quick metrics
+2. **Rules**: Manage firewall rules
+3. **Logs**: View and export logs
+4. **QR Code**: Generate QR codes for sharing
+5. **Configuration**: Settings and profiles
+6. **Monitoring**: Real-time charts, connections, security alerts, VPN controls, and Security management
 
 ### Menu Bar
 
@@ -166,6 +169,32 @@ Displays:
 2. Click "Clear Logs"
 3. Confirm the action
 
+## Monitoring
+
+### Dashboard
+
+- Real-time bandwidth charts (Download/Upload) with interface selector
+- Security alerts table from IDS/enhanced security events
+
+### Connections
+
+- Live list of network connections with protocol, endpoints, status, process and PID
+
+### VPN
+
+- Select VPN (from configured zones)
+- Connect/Disconnect
+- Enable **Kill Switch** (Windows Firewall) and configure **Split Tunneling**
+  - Modes: include (only listed routes via VPN), exclude (listed routes excluded from VPN)
+  - Routes persisted per VPN and applied on startup
+
+Note: Windows Firewall rules require running as Administrator.
+
+### Security
+
+- Block/unblock IP addresses (temporary)
+- Block/unblock countries (GeoIP)
+
 ## Settings
 
 ### General Settings
@@ -211,13 +240,23 @@ Displays:
 - Check the [GitHub Issues](https://github.com/Nsfr750/TuxFw/issues) page
 - Consult the [online documentation](https://github.com/Nsfr750/TuxFw/wiki)
 
+#### VPN Not Connecting
+
+- Ensure OpenVPN/WireGuard tools are installed and on PATH
+- Verify .ovpn/.conf files and permissions
+- On Windows, run as Administrator for WireGuard service control
+
+#### GeoIP Disabled
+
+- Download GeoLite2-Country.mmdb and configure the path
+
 ## Frequently Asked Questions (FAQ)
 
 ### Q: How do I reset TuxFw to default settings?
 A: Close the application and delete the configuration file located at `~/.config/tuxfw/settings.json`
 
 ### Q: Can I use TuxFw on a server without a GUI?
-A: Yes, TuxFw can be used in command-line mode. Run `python -m firewall.cli` for the command-line interface.
+A: Yes, CLI tools are available for selected features (e.g., security CLI). A full CLI is planned in the roadmap.
 
 ### Q: How do I update TuxFw?
 A: 

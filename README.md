@@ -2,32 +2,34 @@
 
 A comprehensive cross-platform firewall management application with a modern UI.
 
-## Features
+## Features (v0.1.0)
 
-- **Bilingual Interface**: Complete support for English and Italian languages
-- **Rule Management**: Add, edit, delete, import, and export firewall rules
-- **Dark Theme**: Modern dark theme with consistent styling across all components
-- **QR Code Generation**: Share rules easily via QR codes
-- **Log Viewer**: Advanced log viewer with search, filtering, and syntax highlighting
-- **Export Capabilities**: Export logs in multiple formats (TXT, CSV, JSON)
-- **Real-time Monitoring**: Monitor firewall status and activity in real-time
-- **User-friendly UI**: Intuitive tabbed interface built with PySide6
-- **Cross-platform**: Works on Windows, macOS, and Linux
-- **Mock Firewall**: Built-in mock firewall for development and testing
-- **Responsive Design**: Adapts to different screen sizes and resolutions
+- **Monitoring**: Real-time bandwidth charts (QtCharts), live connections, security alerts
+- **Enhanced Security**: Rate limiting, GeoIP blocking (GeoLite2), IP reputation feeds, port knocking
+- **VPN Integration**: OpenVPN (process backend, live log streaming) and WireGuard (Windows service/exec)
+- **Kill Switch & Split Tunneling (Windows)**: Enforced via Windows Firewall, per-VPN persistence
+- **Security Tab**: Manage blocked IPs and countries (GeoIP)
+- **Rule Management**: Add, edit, delete, import, and export rules
+- **Dark Theme** with Wand-based imaging; QR Code generation
+- **Logs**: Advanced log viewer with search/filtering and multi-format export (TXT/CSV/JSON)
+- **Bilingual UI**: English and Italian
+- **Cross-platform**: Windows, macOS, Linux; mock firewall for development
 
 ## Requirements
 
 - Python 3.8+
 - PySide6 (Qt6 bindings for Python)
 - Wand (ImageMagick bindings for image processing)
-- qrcode (QR code generation)
-- pip-nftables (Linux firewall support)
-- wheel (building)
-- shiboken6 (building)
-- psutil (system monitoring)
-- pytest (testing)
-- Pillow (image processing, required by qrcode)
+- qrcode
+- psutil
+- geoip2, requests, aiohttp (Enhanced Security)
+- pip-nftables (Linux)
+- wheel, shiboken6, pytest (build/test)
+
+Tools (optional, for VPN):
+
+- OpenVPN installed and on PATH (or provide full path in zone `vpn_config`)
+- WireGuard (Windows) with `wireguard.exe` available for service control
 
 ## Installation
 
@@ -82,19 +84,17 @@ python firewall/main.py
 python firewall/script/main.py
 ```
 
-### Windows Firewall Integration
+### Monitoring & VPN
 
-The application provides a graphical interface for managing Windows firewall rules:
+- Monitoring → Dashboard: view live bandwidth charts, interface selector, security alerts.
+- Monitoring → VPN: select VPN, connect/disconnect, enable Kill Switch, configure Split Tunneling (include/exclude) and routes.
 
-1. **Status Tab**: Monitor firewall status and connection statistics
-2. **Rules Tab**: Add, edit, and delete firewall rules
-3. **Logs Tab**: View and manage firewall logs
-4. **QR Code Tab**: Generate QR codes for rule sharing
-5. **Configuration Tab**: Manage profiles and settings
+Note: Kill Switch and Split Tunneling enforcement require Administrator privileges on Windows.
 
 ### Configuration File
 
 The application uses `config/firewall_config.json` to store:
+
 - Firewall rules with detailed properties
 - Application settings and preferences
 - Profile configurations
@@ -137,10 +137,11 @@ python -m PyInstaller --onedir --name "TuxFw" --icon "firewall/assets/icon.ico" 
 - Import configurations from QR codes
 
 ### Logging and Monitoring
-- Real-time connection monitoring
-- Detailed activity logs
-- Export logs to files
-- Configurable log levels
+
+- Real-time connections and bandwidth charts
+- IDS alerts and Enhanced Security events
+- OpenVPN stdout streamed to VPN log panel
+- Export logs to files; configurable log levels
 
 ## License
 

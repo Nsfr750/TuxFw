@@ -26,13 +26,13 @@ This document outlines the development roadmap for TuxFw, a powerful firewall ma
 - [x] Mock firewall for development
 - [x] Cross-platform support (Windows, Linux, macOS)
 
+### Implemented in v0.1.0
+- [x] Real-time traffic monitoring (charts, bandwidth, connections, alerts)
+- [x] Enhanced Security (rate limiting, GeoIP, IP reputation, port knocking)
+- [x] VPN integration (OpenVPN/WireGuard) with Kill Switch & Split Tunneling (Windows)
+- [x] Security tab (IP and Country blocking)
+
 ### Upcoming Features
-- [x] User-friendly GUI
-- [x] Log viewer with filtering
-- [ ] Real-time traffic monitoring
-- [ ] Network zone management
-- [ ] VPN integration
-- [ ] Intrusion Detection System (IDS)
 - [ ] Cloud synchronization
 - [ ] Multi-user support with role-based access
 
@@ -40,7 +40,7 @@ This document outlines the development roadmap for TuxFw, a powerful firewall ma
 
 ### Phase 1: Core Functionality (v1.0.0)
 
-**Target: Q1 2024**
+**Target: Q1 2026**
 
 #### Features
 - [x] Basic firewall rule management
@@ -62,36 +62,36 @@ This document outlines the development roadmap for TuxFw, a powerful firewall ma
 
 - [ ] Documentation
   - [x] Basic README
-  - [ ] User manual
+  - [x] User manual (User Guide)
   - [ ] API documentation
   - [ ] Developer guide
 
 ### Phase 2: Advanced Features (v1.5.0)
 
-**Target: Q3 2024**
+**Target: Q3 2026**
 
 #### Features
-- [ ] Enhanced Security
-  - [ ] Rate limiting
-  - [ ] GeoIP blocking
-  - [ ] IP reputation checking
-  - [ ] Port knocking
+- [x] Enhanced Security
+  - [x] Rate limiting
+  - [x] GeoIP blocking
+  - [x] IP reputation checking
+  - [x] Port knocking
 
-- [ ] Network Monitoring
-  - [ ] Real-time traffic graphs
-  - [ ] Bandwidth monitoring
-  - [ ] Connection tracking
-  - [ ] Alert system
+- [x] Network Monitoring
+  - [x] Real-time traffic graphs
+  - [x] Bandwidth monitoring
+  - [x] Connection tracking
+  - [x] Alert system
 
-- [ ] VPN Integration
-  - [ ] OpenVPN support
-  - [ ] WireGuard support
-  - [ ] VPN kill switch
-  - [ ] Split tunneling
+- [x] VPN Integration
+  - [x] OpenVPN support
+  - [x] WireGuard support
+  - [x] VPN kill switch (Windows)
+  - [x] Split tunneling (Windows)
 
 ### Phase 3: Enterprise Features (v2.0.0) 
 
-**Target: Q1 2025**
+**Target: Q1 2027**
 
 #### Features
 - [ ] Multi-user Support
@@ -111,7 +111,7 @@ This document outlines the development roadmap for TuxFw, a powerful firewall ma
 
 ### Phase 4: Cloud Integration (v2.5.0)
 
-**Target: Q3 2025**
+**Target: Q3 2027**
 
 #### Features
 - [ ] Cloud Sync
