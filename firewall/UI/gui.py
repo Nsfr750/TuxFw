@@ -11,13 +11,13 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
 from PySide6.QtCore import Qt, QTimer, QThread, Signal, QSize
 from PySide6.QtGui import QPixmap, QIcon, QFont, QAction, QImage, QPixmap
 from wand.image import Image as WandImage
-from lang.translations import translations
-from UI.about import AboutDialog
-from UI.menu import MenuManager
-from UI.view_logs import ViewLogsWindow
-from UI.sponsor import SponsorDialog as SponsorWindow
-from UI.help import HelpWindow
-from logger import get_logger
+from firewall.lang.translations import translations
+from firewall.UI.about import AboutDialog
+from firewall.UI.menu import MenuManager
+from firewall.UI.view_logs import ViewLogsWindow
+from firewall.UI.sponsor import SponsorDialog as SponsorWindow
+from firewall.UI.help import HelpWindow
+from firewall.script.logger import get_logger
 import os
 import json
 import qrcode
@@ -27,7 +27,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 
 # Import FirewallManager from the main module
-from script.firewall_manager import FirewallManager
+from firewall.script.firewall_manager import FirewallManager
 
 class WindowsFirewallManager(QMainWindow):
     """Main firewall management application using PySide6"""

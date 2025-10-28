@@ -1,6 +1,6 @@
 # TuxFw
 
-A comprehensive Windows firewall management application built with Python, PySide6, Wand, and QRCode.
+A comprehensive Windows firewall management application.
 
 ## Features
 
@@ -19,18 +19,19 @@ A comprehensive Windows firewall management application built with Python, PySid
 - PySide6 (Qt6 bindings for Python)
 - Wand (ImageMagick bindings)
 - qrcode (QR code generation)
-- python-iptables (Linux firewall support)
-- wheel
-- shiboken6
-- psutil
+- pip-nftables (Linux firewall support)
+- wheel (building)
+- shiboken6 (building)
+- psutil (system monitoring)
+- pytest (testing)
 
 ## Installation
 
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/Nsfr750/firewall-manager.git
-   cd firewall-manager
+   git clone https://github.com/Nsfr750/TuxFw.git
+   cd TuxFw
    ```
 
 2. Create and activate virtual environment:
@@ -71,10 +72,10 @@ A comprehensive Windows firewall management application built with Python, PySid
 
 ```bash
 # Main entry point
-python main.py
+python firewall/main.py
 
 # Or directly from script folder
-python script/main.py
+python firewall/script/main.py
 ```
 
 ### Windows Firewall Integration
@@ -89,7 +90,7 @@ The application provides a graphical interface for managing Windows firewall rul
 
 ### Configuration File
 
-The application uses `script/firewall_config.json` to store:
+The application uses `config/firewall_config.json` to store:
 - Firewall rules with detailed properties
 - Application settings and preferences
 - Profile configurations
@@ -105,10 +106,10 @@ The application supports both English and Italian languages with full localizati
 
 ```bash
 # One-file executable
-python -m PyInstaller --onefile --name "FirewallManager" --icon "assets/icon.ico" --version-file "version_info.txt" script/main.py
+python -m PyInstaller --onefile --name "TuxFw" --icon "firewall/assets/icon.ico" --version-file "firewall/assets/version_info.txt" firewall/main.py
 
 # Directory distribution
-python -m PyInstaller --onedir --name "FirewallManager" --icon "assets/icon.ico" --version-file "version_info.txt" script/main.py
+python -m PyInstaller --onedir --name "TuxFw" --icon "firewall/assets/icon.ico" --version-file "firewall/assets/version_info.txt" firewall/main.py
 ```
 
 ## Features in Detail

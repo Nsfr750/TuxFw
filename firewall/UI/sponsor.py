@@ -30,7 +30,7 @@ except ImportError:
     logging.debug("wand not available - QR code generation will be disabled")
 
 # Import language manager
-from lang.language_manager import LanguageManager
+from firewall.lang.language_manager import LanguageManager
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QTimer, QRegularExpression
 from PySide6.QtGui import QFont, QTextCharFormat, QColor, QTextCursor, QAction, QIcon
-from lang.translations import translations
+from firewall.lang.translations import translations
 
 
 class ViewLogsWindow(QWidget):

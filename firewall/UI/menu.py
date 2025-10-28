@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from PySide6.QtGui import QAction, QActionGroup
-from lang.translations import translations
+from firewall.lang.translations import translations
 
 
 class MenuManager:

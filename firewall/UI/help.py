@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QTextEdit,
                              QListWidget, QListWidgetItem, QSplitter)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
-from lang.translations import translations
+from firewall.lang.translations import translations
 
 
 class HelpWindow(QWidget):

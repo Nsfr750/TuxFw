@@ -14,13 +14,13 @@ from PySide6 import __version__ as QT_VERSION_STR
 from PySide6.QtGui import QPixmap, QIcon, QDesktopServices
 
 # Import version information
-from script.version import (
+from firewall.script.version import (
     __version__, __author__, __email__, __license__
 )
 
 # Import translations and language manager
-from lang.translations import translations
-from lang.language_manager import LanguageManager
+from firewall.lang.translations import translations
+from firewall.lang.language_manager import LanguageManager
 import os
 import sys
 import platform
