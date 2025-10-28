@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.0] - 2025-10-28
+
+### Added
+- Monitoring tab with real-time bandwidth charts (QtCharts), connections view, and security alerts
+- Enhanced Security: rate limiting, GeoIP blocking, IP reputation feeds, port knocking
+- VPN integration: OpenVPN (process backend with log streaming) and WireGuard (service/exec)
+- Windows Firewall enforcement: Kill Switch and Split Tunneling (include/exclude) with per-VPN persistence
+- Security tab for IP and Country blocking
+- Help updated (EN/IT) with Monitoring, Security, VPN and advanced features
+
+### Changed
+- UI improvements across Monitoring and VPN tabs
+- Zone VPN config supports persisted split tunneling
+
+### Fixed
+- Network monitor stats mapping and stability during startup
+
 ## [0.0.1] - 2025-10-28
 
 ### Added

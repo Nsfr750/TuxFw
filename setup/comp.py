@@ -54,12 +54,12 @@ VSVersionInfo(
           '040904B0',
           [StringStruct('CompanyName', 'Tuxxle'),
           StringStruct('FileDescription', 'TuxFw - Firewall Manager'),
-          StringStruct('FileVersion', '0.0.1'),
+          StringStruct('FileVersion', '0.1.0'),
           StringStruct('InternalName', 'TuxFw'),
           StringStruct('LegalCopyright', '© 2025 Nsfr750. All rights reserved.'),
           StringStruct('OriginalFilename', 'TuxFw.exe'),
           StringStruct('ProductName', 'TuxFw'),
-          StringStruct('ProductVersion', '0.0.1')])
+          StringStruct('ProductVersion', '0.1.0')])
       ]
     ),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])
@@ -267,7 +267,7 @@ VSVersionInfo(
         """Create build information file"""
         build_info = {
             'app_name': self.app_name,
-            'version': '0.0.1',
+            'version': '0.1.0',
             'build_time': str(__import__('datetime').datetime.now()),
             'python_version': sys.version,
             'platform': sys.platform,

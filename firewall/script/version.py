@@ -6,7 +6,7 @@ Version information for TuxFw Firewall.
 """
 
 # Version as a tuple (major, minor, patch)
-VERSION = (0, 0, 1)
+VERSION = (0, 1, 0)
 
 # String version
 __version__ = ".".join(map(str, VERSION))
@@ -22,7 +22,7 @@ __license__ = "GPL-3.0"
 
 # Build information
 __build__ = ""
-__date__ = "2025-10-24"
+__date__ = "2025-10-28"
 
 # Version description
 __description__ = "A modern firewall for Linux/windows"
@@ -38,7 +38,10 @@ __requires__ = [
     "pip-nftables>=1.0.2.post1",
     "pytest>=8.3.4",
     "pyinstaller>=6.11.0",
-    "qrcode>=8.2"
+    "qrcode>=8.2",
+    "geoip2>=4.2.0",
+    "requests>=2.25.1",
+    "aiohttp>=3.8.0"
 ]
 
 # Version as a tuple for comparison
@@ -46,6 +49,24 @@ version_info = tuple(map(int, __version__.split('.')))
 
 # Changelog
 __changelog__ = """
+## [0.1.0] - 2025-10-28
+
+### Added
+- Monitoring tab with real-time bandwidth charts (QtCharts), connections table, and security alerts
+- Enhanced Security: rate limiting, GeoIP blocking (GeoLite2), IP reputation feeds, port knocking
+- VPN integration: OpenVPN (process backend with live stdout streaming) and WireGuard (Windows service/exec)
+- Windows Firewall enforcement: Kill Switch and Split Tunneling (include/exclude), persisted per VPN
+- Security tab for IP and Country blocking management
+- Help content updated (EN/IT) for Monitoring, Security, VPN and advanced features
+
+### Changed
+- FirewallManager signals extended for VPN status/logs; UI Monitoring tab enriched
+- Zone-based VPN configuration supports persistence of split tunneling
+
+### Fixed
+- Network monitor counters handling and UI wiring
+- Various UI stability fixes during startup and monitoring
+
 ## [0.0.1] - 2025-10-28
 
 ### Added
@@ -84,6 +105,16 @@ def get_version_info():
 def get_version_history():
     """Return the version history."""
     return [
+        {
+            "version": "0.1.0",
+            "date": "2025-10-28",
+            "changes": [
+                "Monitoring tab with real-time charts and alerts",
+                "Enhanced Security (rate limiting, GeoIP, reputation, port knocking)",
+                "VPN integration (OpenVPN/WireGuard) with kill switch and split tunneling",
+                "Windows Firewall enforcement and persisted split tunneling"
+            ]
+        },
         {
             "version": "0.0.1",
             "date": "2025-10-28",
