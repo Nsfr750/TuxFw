@@ -77,16 +77,21 @@ Unsure where to begin contributing? You can start by looking through the `good f
 
 1. Fork the repository
 2. Clone your fork:
+
    ```bash
    git clone https://github.com/your-username/TuxFw.git
    cd TuxFw
    ```
+
 3. Set up a virtual environment:
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
+
 4. Install dependencies:
+
    ```bash
    pip install -r requirements-dev.txt
    pip install -e .
@@ -164,7 +169,4 @@ def example_function(param1: str, param2: int = 42) -> bool:
 By contributing to TuxFw, you agree that your contributions will be licensed under the [GPLv3 License](LICENSE).
 
 ---
-
-*Last Updated: October 28, 2025*
-
 © 2025 Nsfr750 - All rights reserved

@@ -270,7 +270,7 @@ pip install -r requirements.txt --upgrade
 A: TuxFw can import UFW rules but runs independently. It's recommended to disable UFW when using TuxFw.
 
 ### Q: How can I contribute to the project?
-A: Contributions are welcome! Please see our [Contributing Guidelines](docs/CONTRIBUTING.md) for more information.
+A: Contributions are welcome! Please see our [Contributing Guidelines](CONTRIBUTING.md) for more information.
 
 ---
 

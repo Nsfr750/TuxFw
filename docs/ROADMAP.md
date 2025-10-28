@@ -120,7 +120,7 @@ We welcome contributions to TuxFw! Here's how you can help:
 4. Test and report issues
 5. Spread the word about TuxFw
 
-Please read our [Contributing Guidelines](docs/CONTRIBUTING.md) for more details.
+Please read our [Contributing Guidelines](CONTRIBUTING.md) for more details.
 
 ## License
 
