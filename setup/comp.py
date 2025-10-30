@@ -12,6 +12,7 @@ import subprocess
 import shutil
 from pathlib import Path
 import argparse
+from importlib import metadata as importlib_metadata
 
 class AppCompiler:
     """Handle application compilation with PyInstaller"""
@@ -82,13 +83,42 @@ VSVersionInfo(
             'pip-nftables'
         ]
 
+        # Map distribution names to potential importable modules
+        import_candidates_map = {
+            'PyInstaller': ['PyInstaller'],
+            'PySide6': ['PySide6'],
+            'wand': ['wand'],
+            'qrcode': ['qrcode'],
+            'pip-nftables': ['pip_nftables', 'nftables'],
+        }
+
         missing_packages = []
 
         for package in required_packages:
+            present = False
+            # First, try to detect by distribution name
             try:
-                __import__(package.replace('-', '_').split('[')[0])
+                _ = importlib_metadata.version(package)
+                present = True
+            except Exception:
+                present = False
+
+            # If not found by distribution, try import candidates
+            if not present:
+                candidates = import_candidates_map.get(
+                    package, [package.replace('-', '_').split('[')[0]]
+                )
+                for mod in candidates:
+                    try:
+                        __import__(mod)
+                        present = True
+                        break
+                    except ImportError:
+                        continue
+
+            if present:
                 print(f"✅ {package}")
-            except ImportError:
+            else:
                 missing_packages.append(package)
                 print(f"❌ {package} - MISSING")
 
@@ -155,15 +185,36 @@ VSVersionInfo(
             args.append('--debug')
 
         # Additional options
-        args.extend([
-            '--add-data', f'{self.project_root}/config;config',
-            '--add-data', f'{self.project_root}/lang;lang',
-            '--add-data', f'{self.project_root}/assets;assets',
+        # Conditionally include data directories if they exist to prevent build failures
+        data_pairs = []
+        if self.config_dir.exists():
+            data_pairs += ['--add-data', f'{self.config_dir};firewall/config']
+        else:
+            print(f"ℹ️  Skipping missing data dir: {self.config_dir}")
+        if self.lang_dir.exists():
+            data_pairs += ['--add-data', f'{self.lang_dir};firewall/lang']
+        else:
+            print(f"ℹ️  Skipping missing data dir: {self.lang_dir}")
+        if self.assets_dir.exists():
+            data_pairs += ['--add-data', f'{self.assets_dir};firewall/assets']
+        else:
+            print(f"ℹ️  Skipping missing data dir: {self.assets_dir}")
+
+        args.extend(data_pairs + [
             '--hidden-import', 'PySide6.QtCore',
             '--hidden-import', 'PySide6.QtWidgets',
             '--hidden-import', 'PySide6.QtGui',
             '--hidden-import', 'wand',
             '--hidden-import', 'qrcode',
+            '--hidden-import', 'psutil',
+            '--hidden-import', 'pyrewall',
+            '--hidden-import', 'pip_nftables',
+            # Ensure Requests has a character detection backend available in the EXE
+            '--hidden-import', 'charset_normalizer',
+            '--hidden-import', 'chardet',
+            # Collect package data/resources to be safe
+            '--collect-all', 'charset_normalizer',
+            '--collect-all', 'chardet',
         ])
 
         # Main script
@@ -174,6 +225,14 @@ VSVersionInfo(
     def build_onefile(self, console=False, debug=False):
         """Build single executable file"""
         print(f"🔨 Building onefile executable (console={console}, debug={debug})...")
+
+        # Remove stale spec to avoid reusing old datas configuration
+        spec_file = self.project_root / f"{self.app_name}.spec"
+        if spec_file.exists():
+            try:
+                spec_file.unlink()
+            except Exception:
+                pass
 
         args = self.get_pyinstaller_args("onefile", console, debug)
 
@@ -204,6 +263,14 @@ VSVersionInfo(
     def build_onedir(self, console=False, debug=False):
         """Build directory with all files"""
         print(f"🔨 Building onedir package (console={console}, debug={debug})...")
+
+        # Remove stale spec to avoid reusing old datas configuration
+        spec_file = self.project_root / f"{self.app_name}.spec"
+        if spec_file.exists():
+            try:
+                spec_file.unlink()
+            except Exception:
+                pass
 
         args = self.get_pyinstaller_args("onedir", console, debug)
 

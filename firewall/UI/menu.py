@@ -97,7 +97,7 @@ class MenuManager:
     def show_about(self):
         """Show the about dialog"""
         if not hasattr(self.parent, 'about_dialog') or self.parent.about_dialog is None:
-            from UI.about import AboutDialog
+            from firewall.UI.about import AboutDialog
             self.parent.about_dialog = AboutDialog(self.parent, self.current_language)
         self.parent.about_dialog.show()
 

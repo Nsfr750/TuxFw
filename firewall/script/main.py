@@ -38,7 +38,7 @@ def main():
         app.setOrganizationName("Tuxxle")
         
         # Import translations
-        from lang.translations import translations
+        from firewall.lang.translations import translations
         
         # Create firewall manager with translations
         firewall_manager = FirewallManager(translations=translations)

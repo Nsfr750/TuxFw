@@ -115,7 +115,7 @@ class AboutDialog(QDialog):
             
             # Try to get additional version info if available
             try:
-                from script.version import get_codename, is_development
+                from firewall.script.version import get_codename, is_development
                 
                 codename = get_codename() if callable(get_codename) else None
                 if codename and codename != 'unknown':
@@ -357,11 +357,11 @@ class AboutDialog(QDialog):
             pyside6_version = QT_VERSION_STR
             
             # Get application information
-            from script.version import __version__ as app_version
+            from firewall.script.version import __version__ as app_version
             
             # Try to get additional version info if available
             try:
-                from script.version import get_codename, is_development
+                from firewall.script.version import get_codename, is_development
                 app_codename = get_codename() if callable(get_codename) else ''
                 app_status = "Development" if callable(is_development) and is_development() else "Stable"
             except ImportError:

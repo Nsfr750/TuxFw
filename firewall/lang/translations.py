@@ -1,5 +1,6 @@
 translations = {
     'en': {
+        'about': 'About',
         "common.close": "Close",
         "sponsor.address": "47Jc6MC47WJVFhiQFYwHyBNQP5BEsjUPG6tc8R37FwcTY8K5Y3LvFzveSXoGiaDQSxDrnCUBJ5WBj6Fgmsfix8VPD4w3gXF",
         "sponsor.buttons.copy_monero": "Copy Monero Address",
